@@ -29,7 +29,7 @@ import {
   SheetDescription,
   SheetHeader,
   SheetTitle,
-} from "@/components/ui/sheet";
+} from "@/components/ui/responsive-sheet";
 import {
   Dialog,
   DialogContent,
@@ -85,6 +85,10 @@ export function EmailsClient({
 }: EmailsClientProps) {
   const [emails, setEmails] = useState<EmailThread[]>(initialEmails);
   const [filter, setFilter] = useState<"all" | "linked" | "unlinked">("all");
+  const [sort, setSort] = useState<"date-desc" | "date-asc" | "sender-asc" | "sender-desc">("date-desc");
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
+  
   const [syncing, setSyncing] = useState(false);
   const [selectedEmail, setSelectedEmail] = useState<EmailThread | null>(null);
   const [sheetWidth, setSheetWidth] = useState(672);
@@ -105,7 +109,8 @@ export function EmailsClient({
 
   useEffect(() => {
     setSelectedThreadIds(new Set());
-  }, [filter]);
+    setCurrentPage(1);
+  }, [filter, sort]);
 
   const toggleSelectThread = (threadId: string) => {
     setSelectedThreadIds((prev) => {
@@ -119,11 +124,39 @@ export function EmailsClient({
     });
   };
 
+  const filteredAndSortedEmails = emails
+    .filter((email) => {
+      if (filter === "linked") return email.applicationId !== null;
+      if (filter === "unlinked") return email.applicationId === null;
+      return true;
+    })
+    .sort((a, b) => {
+      if (sort === "date-desc") {
+        return new Date(b.lastMessageDate).getTime() - new Date(a.lastMessageDate).getTime();
+      }
+      if (sort === "date-asc") {
+        return new Date(a.lastMessageDate).getTime() - new Date(b.lastMessageDate).getTime();
+      }
+      if (sort === "sender-asc") {
+        return a.sender.localeCompare(b.sender);
+      }
+      if (sort === "sender-desc") {
+        return b.sender.localeCompare(a.sender);
+      }
+      return 0;
+    });
+
+  const totalPages = Math.max(1, Math.ceil(filteredAndSortedEmails.length / itemsPerPage));
+  const paginatedEmails = filteredAndSortedEmails.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
+
   const toggleSelectAll = () => {
-    if (filteredEmails.length > 0 && selectedThreadIds.size === filteredEmails.length) {
+    if (paginatedEmails.length > 0 && selectedThreadIds.size === paginatedEmails.length) {
       setSelectedThreadIds(new Set());
     } else {
-      setSelectedThreadIds(new Set(filteredEmails.map((e) => e.id)));
+      setSelectedThreadIds(new Set(paginatedEmails.map((e) => e.id)));
     }
   };
 
@@ -261,16 +294,10 @@ export function EmailsClient({
     });
   };
 
-  const filteredEmails = emails.filter((email) => {
-    if (filter === "linked") return email.applicationId !== null;
-    if (filter === "unlinked") return email.applicationId === null;
-    return true;
-  });
-
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+      <div className="flex items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight text-foreground">Email Updates</h1>
           <p className="text-sm text-muted-foreground hidden sm:block">
@@ -280,39 +307,56 @@ export function EmailsClient({
         <Button
           onClick={handleSync}
           disabled={syncing}
-          className="bg-primary hover:bg-primary/95 text-primary-foreground font-semibold gap-2 h-9 text-xs transition-smooth shadow-lg shadow-primary/15"
+          className="bg-primary hover:bg-primary/95 text-primary-foreground font-semibold gap-1.5 sm:gap-2 h-9 text-xs transition-smooth shadow-lg shadow-primary/15 shrink-0"
         >
           <ArrowClockwise size={16} className={cn(syncing && "animate-spin")} />
-          <span className="hidden sm:inline">{syncing ? "Syncing Gmail..." : "Sync Gmail Inbox"}</span>
+          <span>{syncing ? "Syncing Gmail..." : "Sync Gmail Inbox"}</span>
         </Button>
       </div>
 
-      {/* Filter toolbar */}
-      <div className="flex items-center gap-2 border-b border-border/40 pb-4">
-        <Button
-          variant={filter === "all" ? "secondary" : "ghost"}
-          size="sm"
-          onClick={() => setFilter("all")}
-          className="text-xs transition-smooth h-8"
-        >
-          All Threads
-        </Button>
-        <Button
-          variant={filter === "linked" ? "secondary" : "ghost"}
-          size="sm"
-          onClick={() => setFilter("linked")}
-          className="text-xs transition-smooth h-8"
-        >
-          Linked
-        </Button>
-        <Button
-          variant={filter === "unlinked" ? "secondary" : "ghost"}
-          size="sm"
-          onClick={() => setFilter("unlinked")}
-          className="text-xs transition-smooth h-8"
-        >
-          Unlinked
-        </Button>
+      {/* Filter and Sort toolbar */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-border/40 pb-4">
+        <div className="flex items-center gap-2">
+          <Button
+            variant={filter === "all" ? "secondary" : "ghost"}
+            size="sm"
+            onClick={() => setFilter("all")}
+            className="text-xs transition-smooth h-8"
+          >
+            All Threads
+          </Button>
+          <Button
+            variant={filter === "linked" ? "secondary" : "ghost"}
+            size="sm"
+            onClick={() => setFilter("linked")}
+            className="text-xs transition-smooth h-8"
+          >
+            Linked
+          </Button>
+          <Button
+            variant={filter === "unlinked" ? "secondary" : "ghost"}
+            size="sm"
+            onClick={() => setFilter("unlinked")}
+            className="text-xs transition-smooth h-8"
+          >
+            Unlinked
+          </Button>
+        </div>
+        
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-muted-foreground">Sort by:</span>
+          <Select value={sort} onValueChange={(v: any) => setSort(v)}>
+            <SelectTrigger className="w-[140px] h-8 text-xs">
+              <SelectValue placeholder="Sort..." />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="date-desc">Newest First</SelectItem>
+              <SelectItem value="date-asc">Oldest First</SelectItem>
+              <SelectItem value="sender-asc">Sender (A-Z)</SelectItem>
+              <SelectItem value="sender-desc">Sender (Z-A)</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
       {/* Batch Actions Bar */}
@@ -344,140 +388,197 @@ export function EmailsClient({
 
       {/* Main Table Card */}
       <div className="rounded-xl border border-border bg-card shadow-lg overflow-hidden">
-        {filteredEmails.length === 0 ? (
+        {filteredAndSortedEmails.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 text-sm text-muted-foreground">
             <EnvelopeOpen size={48} className="text-muted-foreground/30 mb-4" />
             No email threads found. Sync your inbox to start tracking.
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm text-left">
-              <thead>
-                <tr className="border-b border-border/50 text-xs font-semibold text-muted-foreground uppercase tracking-wider bg-accent/10">
-                  <th className="px-4 py-4 w-10" onClick={(e) => e.stopPropagation()}>
-                    <Checkbox
-                      checked={filteredEmails.length > 0 && selectedThreadIds.size === filteredEmails.length}
-                      onCheckedChange={toggleSelectAll}
-                      aria-label="Select all emails"
-                    />
-                  </th>
-                  <th className="px-6 py-4">Sender</th>
-                  <th className="px-6 py-4">Subject & Preview</th>
-                  <th className="px-6 py-4">Linked Job</th>
-                  <th className="px-6 py-4">Received</th>
-                  <th className="px-6 py-4 text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border/20">
-                {filteredEmails.map((email) => {
-                  const isLinked = email.applicationId !== null;
-                  return (
-                    <tr
-                      key={email.id}
-                      className="group hover:bg-accent/5 cursor-pointer transition-smooth"
-                      onClick={() => setSelectedEmail(email)}
-                    >
-                      {/* Checkbox */}
-                      <td className="px-4 py-4 w-10" onClick={(e) => e.stopPropagation()}>
-                        <Checkbox
-                          checked={selectedThreadIds.has(email.id)}
-                          onCheckedChange={() => toggleSelectThread(email.id)}
-                          aria-label={`Select email from ${email.sender}`}
-                        />
-                      </td>
+          <>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm text-left">
+                <thead>
+                  <tr className="border-b border-border/50 text-xs font-semibold text-muted-foreground uppercase tracking-wider bg-accent/10">
+                    <th className="px-4 py-4 w-10" onClick={(e) => e.stopPropagation()}>
+                      <Checkbox
+                        checked={paginatedEmails.length > 0 && selectedThreadIds.size === paginatedEmails.length}
+                        onCheckedChange={toggleSelectAll}
+                        aria-label="Select all emails"
+                      />
+                    </th>
+                    <th className="px-6 py-4">Sender</th>
+                    <th className="px-6 py-4">Subject & Preview</th>
+                    <th className="px-6 py-4">Linked Job</th>
+                    <th className="px-6 py-4">Received</th>
+                    <th className="px-6 py-4 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border/20">
+                  {paginatedEmails.map((email) => {
+                    const isLinked = email.applicationId !== null;
+                    return (
+                      <tr
+                        key={email.id}
+                        className="group hover:bg-accent/5 cursor-pointer transition-smooth"
+                        onClick={() => setSelectedEmail(email)}
+                      >
+                        {/* Checkbox */}
+                        <td className="px-4 py-4 w-10" onClick={(e) => e.stopPropagation()}>
+                          <Checkbox
+                            checked={selectedThreadIds.has(email.id)}
+                            onCheckedChange={() => toggleSelectThread(email.id)}
+                            aria-label={`Select email from ${email.sender}`}
+                          />
+                        </td>
 
-                      {/* Sender */}
-                      <td className="px-6 py-4 max-w-[200px] truncate">
-                        <div className="font-semibold text-foreground truncate">{email.sender}</div>
-                      </td>
+                        {/* Sender */}
+                        <td className="px-6 py-4 max-w-[200px] truncate">
+                          <div className="font-semibold text-foreground truncate">{email.sender}</div>
+                        </td>
 
-                      {/* Subject & Snippet */}
-                      <td className="px-6 py-4 min-w-[300px] max-w-[500px]">
-                        <div className="font-semibold text-foreground truncate flex items-center gap-2">
-                          <span className="truncate">{email.subject}</span>
-                          {isLinked && (
-                            <Badge className="bg-primary/10 border-primary/20 text-primary text-[9px] py-0 px-2 font-semibold shrink-0">
-                              Linked
-                            </Badge>
-                          )}
-                        </div>
-                        <div className="text-xs text-muted-foreground mt-0.5 truncate">{email.snippet}</div>
-                      </td>
+                        {/* Subject & Snippet */}
+                        <td className="px-6 py-4 min-w-[300px] max-w-[500px]">
+                          <div className="font-semibold text-foreground truncate flex items-center gap-2">
+                            <span className="truncate">{email.subject}</span>
+                            {isLinked && (
+                              <Badge className="bg-primary/10 border-primary/20 text-primary text-[9px] py-0 px-2 font-semibold shrink-0">
+                                Linked
+                              </Badge>
+                            )}
+                          </div>
+                          <div className="text-xs text-muted-foreground mt-0.5 truncate">{email.snippet}</div>
+                        </td>
 
-                      {/* Linked Job */}
-                      <td className="px-6 py-4" onClick={(e) => e.stopPropagation()}>
-                        <div className="flex items-center gap-1.5">
-                          {isLinked && email.application ? (
-                            <div className="flex items-center gap-2">
-                              <button
+                        {/* Linked Job */}
+                        <td className="px-6 py-4" onClick={(e) => e.stopPropagation()}>
+                          <div className="flex items-center gap-1.5">
+                            {isLinked && email.application ? (
+                              <div className="flex items-center gap-2">
+                                <button
+                                  onClick={() => {
+                                    setActiveEmailToLink(email);
+                                    setLinkModalOpen(true);
+                                  }}
+                                  className="text-xs text-left hover:underline select-none"
+                                >
+                                  <div className="font-semibold text-foreground truncate max-w-[150px]">
+                                    {email.application.company}
+                                  </div>
+                                  <div className="text-[10px] text-muted-foreground truncate max-w-[150px]">
+                                    {email.application.jobTitle}
+                                  </div>
+                                </button>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => handleLinkApplication(email.id, null)}
+                                  className="h-7 w-7 rounded-lg text-destructive hover:bg-destructive/10 hover:text-destructive shrink-0 animate-in fade-in"
+                                  title="Unlink"
+                                >
+                                  <LinkBreak size={14} />
+                                </Button>
+                              </div>
+                            ) : (
+                              <Button
+                                variant="outline"
+                                size="sm"
                                 onClick={() => {
                                   setActiveEmailToLink(email);
                                   setLinkModalOpen(true);
                                 }}
-                                className="text-xs text-left hover:underline select-none"
+                                className="h-7 gap-1 px-2.5 rounded-full text-[10px] font-medium transition-smooth bg-accent/5 hover:bg-accent/15 border-border/40 text-muted-foreground"
                               >
-                                <div className="font-semibold text-foreground truncate max-w-[150px]">
-                                  {email.application.company}
-                                </div>
-                                <div className="text-[10px] text-muted-foreground truncate max-w-[150px]">
-                                  {email.application.jobTitle}
-                                </div>
-                              </button>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => handleLinkApplication(email.id, null)}
-                                className="h-7 w-7 rounded-lg text-destructive hover:bg-destructive/10 hover:text-destructive shrink-0 animate-in fade-in"
-                                title="Unlink"
-                              >
-                                <LinkBreak size={14} />
+                                <LinkIcon size={12} />
+                                Link Job
                               </Button>
-                            </div>
-                          ) : (
+                            )}
+                          </div>
+                        </td>
+
+                        {/* Received Date */}
+                        <td className="px-6 py-4 text-xs text-muted-foreground">
+                          {new Date(email.lastMessageDate).toLocaleDateString("en-US", {
+                            year: "numeric",
+                            month: "short",
+                            day: "numeric",
+                          })}
+                        </td>
+
+                        {/* Actions */}
+                        <td className="px-6 py-4 text-right" onClick={(e) => e.stopPropagation()}>
+                          <div className="flex justify-end gap-1.5 opacity-0 group-hover:opacity-100 transition-smooth">
                             <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => {
-                                setActiveEmailToLink(email);
-                                setLinkModalOpen(true);
-                              }}
-                              className="h-7 gap-1 px-2.5 rounded-full text-[10px] font-medium transition-smooth bg-accent/5 hover:bg-accent/15 border-border/40 text-muted-foreground"
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 rounded-lg text-destructive hover:text-destructive hover:bg-destructive/10"
+                              onClick={() => handleDeleteEmailClick(email.id)}
                             >
-                              <LinkIcon size={12} />
-                              Link Job
+                              <Trash size={16} />
                             </Button>
-                          )}
-                        </div>
-                      </td>
-
-                      {/* Received Date */}
-                      <td className="px-6 py-4 text-xs text-muted-foreground">
-                        {new Date(email.lastMessageDate).toLocaleDateString("en-US", {
-                          year: "numeric",
-                          month: "short",
-                          day: "numeric",
-                        })}
-                      </td>
-
-                      {/* Actions */}
-                      <td className="px-6 py-4 text-right" onClick={(e) => e.stopPropagation()}>
-                        <div className="flex justify-end gap-1.5 opacity-0 group-hover:opacity-100 transition-smooth">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 rounded-lg text-destructive hover:text-destructive hover:bg-destructive/10"
-                            onClick={() => handleDeleteEmailClick(email.id)}
-                          >
-                            <Trash size={16} />
-                          </Button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+            
+            {/* Pagination Controls */}
+            {filteredAndSortedEmails.length > 0 && (
+              <div className="flex items-center justify-between border-t border-border/50 px-6 py-3 bg-accent/5">
+                <div className="text-xs text-muted-foreground">
+                  Showing <span className="font-medium text-foreground">{((currentPage - 1) * itemsPerPage) + 1}</span> to <span className="font-medium text-foreground">{Math.min(currentPage * itemsPerPage, filteredAndSortedEmails.length)}</span> of <span className="font-medium text-foreground">{filteredAndSortedEmails.length}</span> entries
+                </div>
+                <div className="flex gap-2">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => setCurrentPage(p => Math.max(1, p - 1))} 
+                    disabled={currentPage === 1}
+                    className="h-8 text-xs"
+                  >
+                    Previous
+                  </Button>
+                  <div className="flex items-center gap-1">
+                    {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                      // Logic for showing 5 pages at a time centered around current page
+                      let pageNum = i + 1;
+                      if (totalPages > 5) {
+                        if (currentPage <= 3) {
+                          pageNum = i + 1;
+                        } else if (currentPage >= totalPages - 2) {
+                          pageNum = totalPages - 4 + i;
+                        } else {
+                          pageNum = currentPage - 2 + i;
+                        }
+                      }
+                      return (
+                        <Button
+                          key={pageNum}
+                          variant={currentPage === pageNum ? "default" : "outline"}
+                          size="sm"
+                          onClick={() => setCurrentPage(pageNum)}
+                          className={cn("h-8 w-8 p-0 text-xs", currentPage === pageNum ? "pointer-events-none" : "")}
+                        >
+                          {pageNum}
+                        </Button>
+                      );
+                    })}
+                  </div>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} 
+                    disabled={currentPage === totalPages}
+                    className="h-8 text-xs"
+                  >
+                    Next
+                  </Button>
+                </div>
+              </div>
+            )}
+          </>
         )}
       </div>
 
@@ -503,9 +604,9 @@ export function EmailsClient({
             </div>
           </div>
           {selectedEmail && (
-            <div className="space-y-6 pb-12">
+            <div className="space-y-6 pb-4">
               <SheetHeader className="space-y-3">
-                <div className="flex items-center justify-between pr-8">
+                <div className="flex items-center justify-between pr-0 sm:pr-8">
                   <div className="flex items-center gap-2">
                     {selectedEmail.application && (
                       <Badge variant="secondary" className="bg-primary/10 border-primary/20 text-primary py-0.5">
@@ -567,18 +668,18 @@ export function EmailsClient({
                     const decodedBody = decodeGmailBody(msg.payload);
 
                     return (
-                      <div key={msg.id || index} className="space-y-3 rounded-xl border border-border/30 bg-accent/5 p-5 shadow-sm">
+                      <div key={msg.id || index} className="space-y-3 rounded-xl border border-border/30 bg-accent/5 p-5 shadow-sm w-full">
                         <div className="flex justify-between items-baseline border-b border-border/10 pb-2">
                           <p className="text-xs font-semibold text-foreground truncate max-w-[300px]">{msgSender}</p>
-                          <p className="text-[10px] text-muted-foreground">{msgDate}</p>
+                          <p className="text-[10px] text-muted-foreground shrink-0 ml-2">{msgDate}</p>
                         </div>
                         {decodedBody ? (
                           <div 
-                            className="text-xs text-muted-foreground leading-relaxed overflow-x-auto select-text prose prose-neutral dark:prose-invert max-w-none break-words [&_a]:text-primary [&_a]:underline"
+                            className="text-xs text-muted-foreground leading-relaxed overflow-x-auto w-full select-text prose prose-neutral dark:prose-invert max-w-none break-words [&_a]:text-primary [&_a]:underline"
                             dangerouslySetInnerHTML={{ __html: decodedBody }}
                           />
                         ) : (
-                          <p className="text-xs text-muted-foreground leading-relaxed whitespace-pre-wrap select-text">
+                          <p className="text-xs text-muted-foreground leading-relaxed whitespace-pre-wrap select-text break-words w-full">
                             {msg.snippet}
                           </p>
                         )}
@@ -586,10 +687,10 @@ export function EmailsClient({
                     );
                   })
                 ) : (
-                  <div className="space-y-3 rounded-xl border border-border/30 bg-accent/5 p-5 shadow-sm">
+                  <div className="space-y-3 rounded-xl border border-border/30 bg-accent/5 p-5 shadow-sm w-full">
                     <div className="flex justify-between items-baseline border-b border-border/10 pb-2">
                       <p className="text-xs font-semibold text-foreground truncate max-w-[300px]">{selectedEmail.sender}</p>
-                      <p className="text-[10px] text-muted-foreground">
+                      <p className="text-[10px] text-muted-foreground shrink-0 ml-2">
                         {new Date(selectedEmail.lastMessageDate).toLocaleString("en-US", {
                           month: "short",
                           day: "numeric",
@@ -599,7 +700,7 @@ export function EmailsClient({
                         })}
                       </p>
                     </div>
-                    <p className="text-xs text-muted-foreground leading-relaxed whitespace-pre-wrap select-text">
+                    <p className="text-xs text-muted-foreground leading-relaxed whitespace-pre-wrap select-text break-words w-full">
                       {selectedEmail.snippet}
                     </p>
                   </div>

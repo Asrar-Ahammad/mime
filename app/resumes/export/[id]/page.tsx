@@ -36,24 +36,24 @@ export default async function ExportResumePage({ params }: PageProps) {
   return (
     <div className="min-h-screen bg-neutral-900 print:bg-white text-zinc-100 print:text-black py-8 print:py-0 px-4">
       {/* Control bar (hidden when printing) */}
-      <div className="max-w-4xl mx-auto mb-6 flex items-center justify-between print:hidden bg-neutral-800/80 p-4 rounded-xl border border-neutral-700/50 backdrop-blur-md">
-        <div className="flex items-center gap-3">
+      <div className="max-w-4xl mx-auto mb-6 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 print:hidden bg-neutral-800/80 p-4 rounded-xl border border-neutral-700/50 backdrop-blur-md w-full">
+        <div className="flex items-center gap-2 w-full min-w-0">
           <Link
             href="/resumes"
             className={cn(
               buttonVariants({ variant: "ghost", size: "sm" }),
-              "text-zinc-400 hover:text-white gap-1.5"
+              "text-zinc-400 hover:text-white gap-1.5 px-2 shrink-0"
             )}
           >
             <ArrowLeft size={16} />
-            Back to Resumes
+            <span className="hidden sm:inline">Back to Resumes</span>
           </Link>
-          <span className="text-sm font-semibold text-zinc-300 truncate max-w-[200px]">
+          <span className="text-sm font-semibold text-zinc-300 truncate flex-1">
             {resume.name}
           </span>
         </div>
         <Button
-          className="bg-primary hover:bg-primary/95 text-primary-foreground font-semibold gap-1.5"
+          className="w-full sm:w-auto bg-primary hover:bg-primary/95 text-primary-foreground font-semibold gap-1.5 shrink-0"
         >
           <Printer size={16} />
           Print / Save to PDF

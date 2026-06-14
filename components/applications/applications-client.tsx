@@ -31,10 +31,10 @@ import {
 import {
   Sheet,
   SheetContent,
-  SheetDescription,
   SheetHeader,
   SheetTitle,
-} from "@/components/ui/sheet";
+  SheetDescription,
+} from "@/components/ui/responsive-sheet";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
@@ -111,6 +111,9 @@ export function ApplicationsClient({
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [platformFilter, setPlatformFilter] = useState<string>("all");
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
+
   const [selectedApp, setSelectedApp] = useState<DetailedApplication | null>(null);
   const [notesEdit, setNotesEdit] = useState("");
   const [isEditingNotes, setIsEditingNotes] = useState(false);
@@ -130,12 +133,14 @@ export function ApplicationsClient({
     notes: "",
   });
 
-
-
   const [careersSearchOpen, setCareersSearchOpen] = useState(false);
   const [careersSearchQuery, setCareersSearchQuery] = useState("");
 
   const router = useRouter();
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, statusFilter, platformFilter]);
 
   useEffect(() => {
     if (initialAppId) {
@@ -181,6 +186,12 @@ export function ApplicationsClient({
     const matchesPlatform = platformFilter === "all" || app.platform === platformFilter;
     return matchesSearch && matchesStatus && matchesPlatform;
   });
+
+  const totalPages = Math.max(1, Math.ceil(filteredApps.length / itemsPerPage));
+  const paginatedApps = filteredApps.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
 
   const handleStatusChange = async (appId: string, newStatus: ApplicationStatus) => {
     startTransition(async () => {
@@ -251,18 +262,18 @@ export function ApplicationsClient({
   };
 
   const toggleSelectAll = () => {
-    const filteredIds = filteredApps.map((a) => a.id);
-    const allSelected = filteredIds.length > 0 && filteredIds.every((id) => selectedIds.has(id));
+    const pageIds = paginatedApps.map((a) => a.id);
+    const allSelected = pageIds.length > 0 && pageIds.every((id) => selectedIds.has(id));
     if (allSelected) {
       setSelectedIds((prev) => {
         const next = new Set(prev);
-        filteredIds.forEach((id) => next.delete(id));
+        pageIds.forEach((id) => next.delete(id));
         return next;
       });
     } else {
       setSelectedIds((prev) => {
         const next = new Set(prev);
-        filteredIds.forEach((id) => next.add(id));
+        pageIds.forEach((id) => next.add(id));
         return next;
       });
     }
@@ -291,8 +302,9 @@ export function ApplicationsClient({
     });
   };
 
-  const allFilteredSelected = filteredApps.length > 0 && filteredApps.every((a) => selectedIds.has(a.id));
-  const someFilteredSelected = filteredApps.some((a) => selectedIds.has(a.id));
+  const pageIds = paginatedApps.map((a) => a.id);
+  const allFilteredSelected = pageIds.length > 0 && pageIds.every((id) => selectedIds.has(id));
+  const someFilteredSelected = pageIds.some((id) => selectedIds.has(id));
 
   const resetAddForm = () => {
     setAddForm({
@@ -485,7 +497,7 @@ export function ApplicationsClient({
                 </tr>
               </thead>
               <tbody className="divide-y divide-border/20">
-                {filteredApps.map((app) => (
+                {paginatedApps.map((app) => (
                   <tr
                     key={app.id}
                     className="group hover:bg-accent/10 cursor-pointer transition-smooth"
@@ -617,13 +629,67 @@ export function ApplicationsClient({
             </table>
           </div>
         )}
+        
+        {/* Pagination Controls */}
+        {filteredApps.length > 0 && (
+          <div className="flex items-center justify-between border-t border-border/50 px-6 py-3 bg-accent/5">
+            <div className="text-xs text-muted-foreground">
+              Showing <span className="font-medium text-foreground">{((currentPage - 1) * itemsPerPage) + 1}</span> to <span className="font-medium text-foreground">{Math.min(currentPage * itemsPerPage, filteredApps.length)}</span> of <span className="font-medium text-foreground">{filteredApps.length}</span> entries
+            </div>
+            <div className="flex gap-2">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => setCurrentPage(p => Math.max(1, p - 1))} 
+                disabled={currentPage === 1}
+                className="h-8 text-xs"
+              >
+                Previous
+              </Button>
+              <div className="flex items-center gap-1">
+                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                  let pageNum = i + 1;
+                  if (totalPages > 5) {
+                    if (currentPage <= 3) {
+                      pageNum = i + 1;
+                    } else if (currentPage >= totalPages - 2) {
+                      pageNum = totalPages - 4 + i;
+                    } else {
+                      pageNum = currentPage - 2 + i;
+                    }
+                  }
+                  return (
+                    <Button
+                      key={pageNum}
+                      variant={currentPage === pageNum ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => setCurrentPage(pageNum)}
+                      className={cn("h-8 w-8 p-0 text-xs", currentPage === pageNum ? "pointer-events-none" : "")}
+                    >
+                      {pageNum}
+                    </Button>
+                  );
+                })}
+              </div>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} 
+                disabled={currentPage === totalPages}
+                className="h-8 text-xs"
+              >
+                Next
+              </Button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Slide-over Detail Sheet */}
       <Sheet open={selectedApp !== null} onOpenChange={(open) => !open && setSelectedApp(null)}>
         <SheetContent className="w-full sm:max-w-2xl overflow-y-auto bg-card border-l border-border/40">
           {selectedApp && (
-            <div className="space-y-6 pb-12">
+            <div className="space-y-6 pb-4">
               <SheetHeader className="space-y-3">
                 <div className="flex items-center gap-2">
                   <span

@@ -421,7 +421,7 @@ export function ResumesClient({
                       title="Export PDF"
                     >
                       <FilePdf size={14} />
-                      <span className="hidden sm:inline">Export PDF</span>
+                      <span>Export PDF</span>
                     </a>
                     {!selectedResume.isMaster && (
                       <Button
@@ -433,17 +433,18 @@ export function ResumesClient({
                         title="Set as Master"
                       >
                         <CheckCircle size={14} />
-                        <span className="hidden sm:inline">Set as Master</span>
+                        <span>Set as Master</span>
                       </Button>
                     )}
                     <Button
-                      variant="ghost"
-                      size="icon"
+                      variant="outline"
+                      size="sm"
                       disabled={isPending}
                       onClick={() => triggerDelete(selectedResume.id)}
-                      className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10 rounded-lg"
+                      className="text-xs transition-smooth bg-card gap-1.5 text-destructive hover:text-destructive hover:bg-destructive/10 border-destructive/20 hover:border-destructive/30"
                     >
-                      <Trash size={16} />
+                      <Trash size={14} />
+                      <span>Delete</span>
                     </Button>
                   </div>
                 </CardHeader>

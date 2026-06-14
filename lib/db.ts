@@ -6,6 +6,9 @@ const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined;
 };
 
+// Clear cached Prisma client to force reload after schema changes
+globalForPrisma.prisma = undefined;
+
 const createPrismaClient = () => {
   const connectionString = process.env.DATABASE_URL;
   const pool = new Pool({ connectionString });
