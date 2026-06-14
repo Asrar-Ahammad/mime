@@ -5,10 +5,12 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Download, Info } from "lucide-react";
 
+import { usePwa } from "@/components/providers/pwa-provider";
+
 export function PwaInstallPrompt() {
   const [isIOS, setIsIOS] = useState(false);
   const [isStandalone, setIsStandalone] = useState(false);
-  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+  const { deferredPrompt, clearPrompt } = usePwa();
 
   useEffect(() => {
     // Check if device is iOS
@@ -17,23 +19,6 @@ export function PwaInstallPrompt() {
 
     // Check if already installed
     setIsStandalone(window.matchMedia("(display-mode: standalone)").matches);
-
-    // Register service worker for PWA functionality
-    if ("serviceWorker" in navigator) {
-      navigator.serviceWorker.register("/sw.js").catch(err => console.error("SW registration failed", err));
-    }
-
-    // Capture the install prompt event
-    const handleBeforeInstallPrompt = (e: any) => {
-      e.preventDefault();
-      setDeferredPrompt(e);
-    };
-
-    window.addEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
-
-    return () => {
-      window.removeEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
-    };
   }, []);
 
   const handleInstallClick = async () => {
@@ -41,7 +26,7 @@ export function PwaInstallPrompt() {
     deferredPrompt.prompt();
     const { outcome } = await deferredPrompt.userChoice;
     if (outcome === "accepted") {
-      setDeferredPrompt(null);
+      clearPrompt();
     }
   };
 

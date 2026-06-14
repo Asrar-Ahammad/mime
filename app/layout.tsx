@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import { ThemeProvider } from "@/components/providers/theme-provider";
+import { PwaProvider } from "@/components/providers/pwa-provider";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "@/components/ui/sonner";
 import "./globals.css";
@@ -35,6 +36,19 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning className={`${inter.variable} h-full`}>
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              window.__deferredPrompt = null;
+              window.addEventListener('beforeinstallprompt', (e) => {
+                e.preventDefault();
+                window.__deferredPrompt = e;
+              });
+            `,
+          }}
+        />
+      </head>
       <body className="min-h-full bg-background text-foreground antialiased">
         <ThemeProvider
           attribute="class"
@@ -42,10 +56,12 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <TooltipProvider delay={300}>
-            {children}
-          </TooltipProvider>
-          <Toaster richColors position="bottom-right" />
+          <PwaProvider>
+            <TooltipProvider delay={300}>
+              {children}
+            </TooltipProvider>
+            <Toaster richColors position="bottom-right" />
+          </PwaProvider>
         </ThemeProvider>
       </body>
     </html>
