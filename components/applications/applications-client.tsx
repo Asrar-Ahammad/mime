@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition, useEffect } from "react";
+import { useState, useTransition, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import {
   MagnifyingGlass,
@@ -129,9 +129,19 @@ export function ApplicationsClient({
     jobUrl: "",
     jobDescription: "",
     platform: "direct",
+    customPlatform: "",
     status: "APPLIED" as ApplicationStatus,
     notes: "",
   });
+
+  const uniquePlatforms = useMemo(() => {
+    const basePlatforms = ["direct", "linkedin", "naukri", "instahyre", "wellfound", "indeed"];
+    const allPlatforms = new Set(basePlatforms);
+    applications.forEach(app => {
+      if (app.platform) allPlatforms.add(app.platform.toLowerCase());
+    });
+    return Array.from(allPlatforms).sort();
+  }, [applications]);
 
   const [careersSearchOpen, setCareersSearchOpen] = useState(false);
   const [careersSearchQuery, setCareersSearchQuery] = useState("");
@@ -183,7 +193,7 @@ export function ApplicationsClient({
       app.company.toLowerCase().includes(searchTerm.toLowerCase()) ||
       app.jobTitle.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = statusFilter === "all" || app.status === statusFilter;
-    const matchesPlatform = platformFilter === "all" || app.platform === platformFilter;
+    const matchesPlatform = platformFilter === "all" || (app.platform || "direct").toLowerCase() === platformFilter.toLowerCase();
     return matchesSearch && matchesStatus && matchesPlatform;
   });
 
@@ -327,6 +337,7 @@ export function ApplicationsClient({
       jobUrl: "",
       jobDescription: "",
       platform: "direct",
+      customPlatform: "",
       status: "APPLIED" as ApplicationStatus,
       notes: "",
     });
@@ -337,8 +348,13 @@ export function ApplicationsClient({
       toast.error("Company, Job Title, and Job URL are required");
       return;
     }
+    
+    const finalPlatform = addForm.platform === "__custom__" 
+      ? (addForm.customPlatform.trim() || "direct").toLowerCase() 
+      : addForm.platform;
+
     startTransition(async () => {
-      const result = await createAction(addForm);
+      const result = await createAction({ ...addForm, platform: finalPlatform });
       if (result.success && result.application) {
         setApplications((prev) => [result.application, ...prev]);
         setAddOpen(false);
@@ -447,11 +463,11 @@ export function ApplicationsClient({
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Platforms</SelectItem>
-            <SelectItem value="naukri" className="capitalize">Naukri</SelectItem>
-            <SelectItem value="instahyre" className="capitalize">Instahyre</SelectItem>
-            <SelectItem value="wellfound" className="capitalize">Wellfound</SelectItem>
-            <SelectItem value="indeed" className="capitalize">Indeed</SelectItem>
-            <SelectItem value="direct" className="capitalize">Direct</SelectItem>
+            {uniquePlatforms.map((plat) => (
+              <SelectItem key={plat} value={plat} className="capitalize">
+                {plat}
+              </SelectItem>
+            ))}
           </SelectContent>
         </Select>
       </div>
@@ -1041,14 +1057,29 @@ export function ApplicationsClient({
                   <SelectValue placeholder="Select platform" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="direct" className="capitalize">Direct</SelectItem>
-                  <SelectItem value="naukri" className="capitalize">Naukri</SelectItem>
-                  <SelectItem value="instahyre" className="capitalize">Instahyre</SelectItem>
-                  <SelectItem value="wellfound" className="capitalize">Wellfound</SelectItem>
-                  <SelectItem value="indeed" className="capitalize">Indeed</SelectItem>
+                  {uniquePlatforms.map((plat) => (
+                    <SelectItem key={plat} value={plat} className="capitalize">
+                      {plat}
+                    </SelectItem>
+                  ))}
+                  <SelectItem value="__custom__" className="capitalize text-primary font-medium">
+                    + Add Custom Platform
+                  </SelectItem>
                 </SelectContent>
               </Select>
             </div>
+            {addForm.platform === "__custom__" && (
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Custom Platform Name *</label>
+                <Input
+                  placeholder="e.g. Glassdoor, ZipRecruiter"
+                  value={addForm.customPlatform}
+                  onChange={(e) => setAddForm(prev => ({ ...prev, customPlatform: e.target.value }))}
+                  className="bg-accent/10 border-border/40 focus-visible:bg-accent/20"
+                  autoFocus
+                />
+              </div>
+            )}
             <div className="space-y-1.5">
               <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Status *</label>
               <Select
