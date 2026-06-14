@@ -194,18 +194,32 @@ export function ApplicationsClient({
   );
 
   const handleStatusChange = async (appId: string, newStatus: ApplicationStatus) => {
+    const previousApp = applications.find(a => a.id === appId);
+    const previousStatus = previousApp?.status;
+
+    // Optimistic UI Update
+    setApplications((prev) =>
+      prev.map((app) => (app.id === appId ? { ...app, status: newStatus } : app))
+    );
+    if (selectedApp?.id === appId) {
+      setSelectedApp((prev) => (prev ? { ...prev, status: newStatus } : null));
+    }
+
     startTransition(async () => {
       const result = await updateAction(appId, { status: newStatus });
       if (result.success) {
-        setApplications((prev) =>
-          prev.map((app) => (app.id === appId ? { ...app, status: newStatus } : app))
-        );
-        if (selectedApp?.id === appId) {
-          setSelectedApp((prev) => (prev ? { ...prev, status: newStatus } : null));
-        }
         toast.success(`Status updated to ${newStatus.toLowerCase()}`);
       } else {
         toast.error(result.error || "Failed to update status");
+        // Revert on failure
+        if (previousStatus) {
+          setApplications((prev) =>
+            prev.map((app) => (app.id === appId ? { ...app, status: previousStatus } : app))
+          );
+          if (selectedApp?.id === appId) {
+            setSelectedApp((prev) => (prev ? { ...prev, status: previousStatus } : null));
+          }
+        }
       }
     });
   };
