@@ -49,6 +49,10 @@ export async function linkEmailAction(threadId: string, applicationId: string | 
       return { success: false, error: "Email thread not found" };
     }
 
+    if (thread.userId !== userId) {
+      return { success: false, error: "Unauthorized" };
+    }
+
     if (applicationId) {
       // Verify application ownership
       const app = await db.application.findUnique({
@@ -91,11 +95,6 @@ export async function deleteEmailAction(threadId: string) {
   try {
     const thread = await db.emailThread.findUnique({
       where: { id: threadId },
-      include: {
-        application: {
-          select: { userId: true }
-        }
-      }
     });
 
     if (!thread) {
@@ -103,7 +102,7 @@ export async function deleteEmailAction(threadId: string) {
     }
 
     // Verify ownership
-    if (thread.application && thread.application.userId !== userId) {
+    if (thread.userId !== userId) {
       return { success: false, error: "Unauthorized" };
     }
 
@@ -136,10 +135,7 @@ export async function deleteEmailsAction(threadIds: string[]) {
     await db.emailThread.deleteMany({
       where: {
         id: { in: threadIds },
-        OR: [
-          { applicationId: null },
-          { application: { userId } }
-        ]
+        userId,
       }
     });
 

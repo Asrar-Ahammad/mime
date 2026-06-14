@@ -2,7 +2,6 @@ import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { redirect } from "next/navigation";
 import { DashboardClient } from "@/components/dashboard/dashboard-client";
-import { cookies } from "next/headers";
 
 export default async function DashboardPage() {
   const session = await auth();
@@ -129,19 +128,12 @@ export default async function DashboardPage() {
     { name: "Rejected", value: rejected, color: "var(--color-status-rejected)" },
   ];
 
-  const cookieStore = await cookies();
-  const dismissedDemo = cookieStore.get(`dismissed_demo_${userId}`)?.value === "true";
-
-  // If there is no data in DB, isDemo is true to show placeholders, unless user dismissed it
-  const isDemo = totalApplications === 0 && !dismissedDemo;
-
   return (
     <DashboardClient
       realStats={realStats}
       realRecentApplications={formattedRecentApplications}
       realChartData={chartData}
       realPieData={pieData}
-      isDemo={isDemo}
       userId={userId}
     />
   );

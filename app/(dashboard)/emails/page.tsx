@@ -35,15 +35,10 @@ export default async function EmailsPage({ searchParams }: PageProps) {
     orderBy: { company: "asc" },
   });
 
-  // Fetch synced email threads.
-  // In a multi-user setup, we retrieve threads that are linked to the user's applications,
-  // or unlinked ones. Since this is local-only, retrieving all threads in the DB works great.
+  // Fetch synced email threads scoped to current user
   const emailThreads = await db.emailThread.findMany({
     where: {
-      OR: [
-        { applicationId: null },
-        { application: { userId } },
-      ],
+      userId,
     },
     include: {
       application: {

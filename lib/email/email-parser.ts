@@ -281,7 +281,12 @@ export async function syncUserEmails(userId: string) {
 
       // Check if thread already imported
       const existingThread = await db.emailThread.findUnique({
-        where: { gmailThreadId: thread.id },
+        where: {
+          userId_gmailThreadId: {
+            userId,
+            gmailThreadId: thread.id,
+          },
+        },
       });
 
       let linkedApplicationId: string | null = null;
@@ -396,7 +401,12 @@ export async function syncUserEmails(userId: string) {
 
       // Upsert EmailThread record
       await db.emailThread.upsert({
-        where: { gmailThreadId: thread.id },
+        where: {
+          userId_gmailThreadId: {
+            userId,
+            gmailThreadId: thread.id,
+          },
+        },
         update: {
           snippet: thread.snippet,
           subject: thread.subject,
@@ -406,6 +416,7 @@ export async function syncUserEmails(userId: string) {
           rawMessages: thread.rawMessages as any,
         },
         create: {
+          userId,
           gmailThreadId: thread.id,
           subject: thread.subject,
           snippet: thread.snippet,

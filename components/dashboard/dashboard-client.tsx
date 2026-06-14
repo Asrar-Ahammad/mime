@@ -1,22 +1,17 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
 import {
   Briefcase,
   Calendar,
   Sparkle,
-  Envelope,
   ArrowRight,
   Plus,
   Play,
-  FileArrowUp,
-  EnvelopeSimple,
   CheckCircle,
   Clock,
   Warning,
 } from "@phosphor-icons/react";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Area,
@@ -32,107 +27,21 @@ import {
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 
-// Mock data for fallback / demonstration
-const mockStats = {
-  totalApplied: 42,
-  interviewing: 6,
-  offers: 2,
-  responseRate: 19, // % (interviewing + offers + viewed / total)
-  totalQueued: 15,
-  totalRejected: 12,
-};
-
-const mockChartData = [
-  { date: "Jun 08", applied: 3, interviews: 0 },
-  { date: "Jun 09", applied: 5, interviews: 1 },
-  { date: "Jun 10", applied: 8, interviews: 2 },
-  { date: "Jun 11", applied: 4, interviews: 1 },
-  { date: "Jun 12", applied: 10, interviews: 3 },
-  { date: "Jun 13", applied: 7, interviews: 4 },
-  { date: "Jun 14", applied: 12, interviews: 6 },
-];
-
-const mockPieData = [
-  { name: "Interviewing", value: 6, color: "var(--color-status-interviewing)" },
-  { name: "Applied", value: 22, color: "var(--color-status-applied)" },
-  { name: "Queued", value: 15, color: "var(--color-status-queued)" },
-  { name: "Offers", value: 2, color: "var(--color-status-offered)" },
-  { name: "Rejected", value: 12, color: "var(--color-status-rejected)" },
-];
-
-const mockRecentApplications = [
-  {
-    id: "1",
-    company: "Google",
-    jobTitle: "Senior Frontend Engineer",
-    platform: "direct",
-    status: "INTERVIEWING",
-    fitScore: 94,
-    appliedAt: "2026-06-12T10:00:00.000Z",
-  },
-  {
-    id: "2",
-    company: "Stripe",
-    jobTitle: "Software Engineer, Core API",
-    platform: "indeed",
-    status: "APPLIED",
-    fitScore: 88,
-    appliedAt: "2026-06-13T14:30:00.000Z",
-  },
-  {
-    id: "3",
-    company: "Instahyre",
-    jobTitle: "React Developer",
-    platform: "instahyre",
-    status: "QUEUED",
-    fitScore: 81,
-    appliedAt: null,
-  },
-  {
-    id: "4",
-    company: "Wellfound Co.",
-    jobTitle: "Fullstack AI Engineer",
-    platform: "wellfound",
-    status: "OFFERED",
-    fitScore: 97,
-    appliedAt: "2026-06-10T09:15:00.000Z",
-  },
-  {
-    id: "5",
-    company: "Razorpay",
-    jobTitle: "UI Engineer",
-    platform: "naukri",
-    status: "REJECTED",
-    fitScore: 76,
-    appliedAt: "2026-06-08T16:45:00.000Z",
-  },
-];
-
 interface DashboardClientProps {
   realStats: any;
   realRecentApplications: any[];
   realChartData: any[];
   realPieData: any[];
-  isDemo: boolean;
   userId: string;
 }
 
 export function DashboardClient({
-  realStats,
-  realRecentApplications,
-  realChartData,
-  realPieData,
-  isDemo: serverIsDemo,
+  realStats: stats,
+  realRecentApplications: recentApplications,
+  realChartData: chartData,
+  realPieData: pieData,
   userId,
 }: DashboardClientProps) {
-  const router = useRouter();
-  const [showDemo, setShowDemo] = useState(serverIsDemo);
-
-  const stats = showDemo ? mockStats : realStats;
-  const chartData = showDemo ? mockChartData : realChartData;
-  const pieData = showDemo ? mockPieData : realPieData;
-  const recentApplications = showDemo ? mockRecentApplications : realRecentApplications;
-
   const statusColors: Record<string, string> = {
     QUEUED: "bg-status-queued/10 text-status-queued border-status-queued/20",
     APPROVED: "bg-status-queued/10 text-status-queued border-status-queued/20",
@@ -147,44 +56,6 @@ export function DashboardClient({
 
   return (
     <div className="space-y-6">
-      {/* Top Banner for Demo mode */}
-      {showDemo && (
-        <div className="flex items-center justify-between rounded-xl border border-primary/20 bg-primary/5 p-4 backdrop-blur-md">
-          <div className="flex items-center gap-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 text-primary">
-              <Sparkle size={20} className="animate-pulse" />
-            </div>
-            <div>
-              <p className="text-sm font-semibold text-foreground">Showing Demo Data</p>
-              <p className="text-xs text-muted-foreground">
-                Get started by uploading your master resume and configuring the AI Agent.
-              </p>
-            </div>
-          </div>
-          <div className="flex items-center gap-3">
-            <Link
-              href="/resumes"
-              className={cn(buttonVariants({ variant: "outline", size: "sm" }), "gap-2")}
-            >
-              <FileArrowUp size={16} />
-              Upload Resume
-            </Link>
-            {serverIsDemo && (
-              <Button
-                size="sm"
-                onClick={() => {
-                  document.cookie = `dismissed_demo_${userId}=true; path=/; max-age=31536000; SameSite=Lax`;
-                  setShowDemo(false);
-                  router.refresh();
-                }}
-                className="bg-primary hover:bg-primary/95 text-primary-foreground"
-              >
-                Dismiss Demo
-              </Button>
-            )}
-          </div>
-        </div>
-      )}
 
       {/* Greeting Header */}
       <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
@@ -500,45 +371,10 @@ export function DashboardClient({
             <CardDescription>Recent actions performed by Mime</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4 flex-1">
-            {showDemo ? (
-              <div className="space-y-4">
-                <div className="flex gap-3 items-start">
-                  <div className="rounded-full bg-status-applied/10 p-2 text-status-applied shrink-0">
-                    <Sparkle size={16} />
-                  </div>
-                  <div>
-                    <p className="text-xs font-medium text-foreground">Scanned Wellfound platform</p>
-                    <p className="text-[10px] text-muted-foreground">Discovered 14 Software Engineer jobs</p>
-                    <span className="text-[9px] text-muted-foreground/60">10 minutes ago</span>
-                  </div>
-                </div>
-                <div className="flex gap-3 items-start">
-                  <div className="rounded-full bg-status-interviewing/10 p-2 text-status-interviewing shrink-0">
-                    <EnvelopeSimple size={16} />
-                  </div>
-                  <div>
-                    <p className="text-xs font-medium text-foreground">Email alert matching</p>
-                    <p className="text-[10px] text-muted-foreground">Detected update from Google: Next Steps Interview</p>
-                    <span className="text-[9px] text-muted-foreground/60">2 hours ago</span>
-                  </div>
-                </div>
-                <div className="flex gap-3 items-start">
-                  <div className="rounded-full bg-status-queued/10 p-2 text-status-queued shrink-0">
-                    <Clock size={16} />
-                  </div>
-                  <div>
-                    <p className="text-xs font-medium text-foreground">Tailored new resume version</p>
-                    <p className="text-[10px] text-muted-foreground">Variant tailored for Stripe SWE role</p>
-                    <span className="text-[9px] text-muted-foreground/60">4 hours ago</span>
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <div className="flex flex-col items-center justify-center py-12 text-sm text-muted-foreground text-center">
-                <Warning size={32} className="text-muted-foreground/30 mb-2" />
-                No recent agent logs. Configure and run the agent to start automation.
-              </div>
-            )}
+            <div className="flex flex-col items-center justify-center py-12 text-sm text-muted-foreground text-center">
+              <Warning size={32} className="text-muted-foreground/30 mb-2" />
+              No recent agent logs. Configure and run the agent to start automation.
+            </div>
           </CardContent>
           <div className="p-6 pt-0 border-t border-border/20 mt-4">
             <Link
