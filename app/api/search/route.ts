@@ -52,18 +52,11 @@ export async function GET(request: Request) {
       }),
       db.emailThread.findMany({
         where: {
+          userId,
           OR: [
-            { applicationId: null },
-            { application: { userId } },
-          ],
-          AND: [
-            {
-              OR: [
-                { subject: { contains: query, mode: "insensitive" } },
-                { sender: { contains: query, mode: "insensitive" } },
-                { snippet: { contains: query, mode: "insensitive" } },
-              ],
-            },
+            { subject: { contains: query, mode: "insensitive" } },
+            { sender: { contains: query, mode: "insensitive" } },
+            { snippet: { contains: query, mode: "insensitive" } },
           ],
         },
         select: {
