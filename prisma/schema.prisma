@@ -1,0 +1,179 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ── Auth.js models ──────────────────────────────────────────
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String    @unique
+  emailVerified DateTime?
+  image         String?
+  accounts      Account[]
+  sessions      Session[]
+
+  // App-specific relations
+  resumes      Resume[]
+  applications Application[]
+  agentConfigs AgentConfig[]
+  notifications Notification[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Account {
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([provider, providerAccountId])
+}
+
+model Session {
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String
+  expires    DateTime
+
+  @@id([identifier, token])
+}
+
+// ── Resume ──────────────────────────────────────────────────
+
+model Resume {
+  id             String  @id @default(cuid())
+  userId         String
+  user           User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name           String // "Master Resume" / "Tailored for Google SWE"
+  originalFile   String // Path to uploaded file
+  parsedContent  Json? // Structured resume data
+  isMaster       Boolean @default(false)
+  parentResumeId String? // Links tailored variant → master
+
+  applications Application[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+}
+
+// ── Application ─────────────────────────────────────────────
+
+enum ApplicationStatus {
+  QUEUED
+  APPROVED
+  APPLYING
+  APPLIED
+  VIEWED
+  INTERVIEWING
+  OFFERED
+  REJECTED
+  WITHDRAWN
+}
+
+model Application {
+  id             String            @id @default(cuid())
+  userId         String
+  user           User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  resumeId       String?
+  resume         Resume?           @relation(fields: [resumeId], references: [id], onDelete: SetNull)
+  company        String
+  jobTitle       String
+  jobUrl         String
+  jobDescription String            @db.Text
+  platform       String // "naukri" | "instahyre" | "wellfound" | "indeed" | "direct"
+  status         ApplicationStatus @default(QUEUED)
+  fitScore       Float? // 0–100 AI match score
+  appliedAt      DateTime?
+  notes          String?           @db.Text
+
+  emailThreads EmailThread[]
+  notifications Notification[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([status])
+}
+
+// ── Email ───────────────────────────────────────────────────
+
+model EmailThread {
+  id              String       @id @default(cuid())
+  applicationId   String?
+  application     Application? @relation(fields: [applicationId], references: [id], onDelete: SetNull)
+  gmailThreadId   String       @unique
+  subject         String
+  snippet         String
+  sender          String
+  lastMessageDate DateTime
+  isRead          Boolean      @default(false)
+  rawMessages     Json // Full message data
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([applicationId])
+}
+
+// ── Agent Config ────────────────────────────────────────────
+
+model AgentConfig {
+  id              String   @id @default(cuid())
+  userId          String
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  targetRoles     String[] // ["Software Engineer", "Frontend Developer"]
+  targetLocations String[] // ["Remote", "Bangalore"]
+  minSalary       Int?
+  platforms       String[] // ["naukri", "instahyre", "wellfound", "indeed"]
+  autoApply       Boolean  @default(false)
+  dailyLimit      Int      @default(20)
+  isActive        Boolean  @default(false)
+  syncHour        Int      @default(6)  // 0-23 hour for daily Gmail sync
+  syncMinute      Int      @default(0)  // 0-59 minute for daily Gmail sync
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+}
+
+// ── Notification ─────────────────────────────────────────────
+
+model Notification {
+  id            String      @id @default(cuid())
+  userId        String
+  user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  applicationId String
+  application   Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  title         String
+  message       String
+  isRead        Boolean     @default(false)
+  createdAt     DateTime    @default(now())
+
+  @@index([userId])
+}
