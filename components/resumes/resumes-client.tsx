@@ -625,7 +625,7 @@ export function ResumesClient({
             </>
           ) : (
             <div className="flex flex-col items-center justify-center py-20 text-sm text-muted-foreground text-center border rounded-xl border-dashed border-border/40 bg-card p-6 h-[400px]">
-              <FilePdf size={48} className="text-muted-foreground/30 mb-4 animate-bounce" />
+              <FilePdf size={48} className="text-muted-foreground/30 mb-4" />
               <p className="font-semibold text-foreground text-base">Select or upload a resume to view details</p>
               <p className="text-xs text-muted-foreground max-w-sm mt-1">
                 You must have a master resume uploaded so the scraper agent can tailor it and submit applications.

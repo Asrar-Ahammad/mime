@@ -15,11 +15,19 @@ export default function AgentClient() {
   const [results, setResults] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  useEffect(() => {
+    const savedResults = localStorage.getItem("mime_agent_results");
+    if (savedResults) {
+      setResults(savedResults);
+    }
+  }, []);
+
   const handleDiscover = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     setError(null);
     setResults(null);
+    localStorage.removeItem("mime_agent_results");
 
     try {
       const res = await fetch("/api/agent/discover", {
@@ -35,6 +43,7 @@ export default function AgentClient() {
       }
 
       setResults(data.data);
+      localStorage.setItem("mime_agent_results", data.data);
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -169,13 +178,13 @@ function TerminalLoading() {
   }, [currentStepIndex]);
 
   return (
-    <div className="w-full max-w-2xl bg-black/95 rounded-lg p-5 font-mono text-sm text-white border border-white/20 shadow-2xl overflow-hidden relative">
+    <div className="w-full max-w-2xl bg-black/95 rounded-lg p-5 font-mono text-xs text-white border border-white/20 shadow-2xl overflow-hidden relative">
       <div className="flex gap-2 mb-4 border-b border-white/10 pb-3">
         <div className="w-3 h-3 rounded-full bg-red-500/80"></div>
         <div className="w-3 h-3 rounded-full bg-yellow-500/80"></div>
         <div className="w-3 h-3 rounded-full bg-green-500/80"></div>
       </div>
-      <div className="space-y-2 h-[200px] flex flex-col justify-end">
+      <div className="space-y-2 h-[200px] flex flex-col justify-end overflow-hidden relative">
         {displayedLines.map((line, i) => (
           <div key={i} className="animate-fade-in flex">
             <span className="text-gray-500 mr-3">{'>'}</span>
