@@ -82,10 +82,7 @@ export function Topbar({ user }: TopbarProps) {
         document.activeElement?.tagName === "TEXTAREA" ||
         (document.activeElement as HTMLElement)?.isContentEditable;
 
-      if (
-        (e.key === "k" && (e.metaKey || e.ctrlKey)) ||
-        (e.key === "/" && !isTyping)
-      ) {
+      if (e.key === "k" && (e.metaKey || e.ctrlKey)) {
         e.preventDefault();
         setOpen((o) => !o);
       }
@@ -170,10 +167,6 @@ export function Topbar({ user }: TopbarProps) {
             <div className="hidden sm:flex items-center gap-1">
               <kbd className="pointer-events-none inline-flex h-5 select-none items-center gap-1 rounded border border-border bg-muted px-1.5 font-mono text-[9px] font-medium text-muted-foreground opacity-100">
                 <span className="text-xs">⌘</span>K
-              </kbd>
-              <span className="text-[9px] text-muted-foreground/40 font-medium">or</span>
-              <kbd className="pointer-events-none inline-flex h-5 select-none items-center gap-1 rounded border border-border bg-muted px-2 font-mono text-[9px] font-medium text-muted-foreground opacity-100">
-                /
               </kbd>
             </div>
           </div>

@@ -442,34 +442,40 @@ export function ApplicationsClient({
         </div>
 
         {/* Status Filter */}
-        <Select value={statusFilter} onValueChange={(val) => setStatusFilter(val || "all")}>
-          <SelectTrigger className="w-full sm:w-[180px] bg-accent/20 h-10 border-border capitalize">
-            <SelectValue placeholder="All Statuses" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Statuses</SelectItem>
-            {availableStatuses.map((st) => (
-              <SelectItem key={st} value={st} className="capitalize">
-                {st.toLowerCase()}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-muted-foreground shrink-0">Status:</span>
+          <Select value={statusFilter} onValueChange={(val) => setStatusFilter(val || "all")}>
+            <SelectTrigger className="w-full sm:w-[180px] bg-accent/20 h-10 border-border capitalize">
+              <SelectValue placeholder="All Statuses" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Statuses</SelectItem>
+              {availableStatuses.map((st) => (
+                <SelectItem key={st} value={st} className="capitalize">
+                  {st.toLowerCase()}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
 
         {/* Platform Filter */}
-        <Select value={platformFilter} onValueChange={(val) => setPlatformFilter(val || "all")}>
-          <SelectTrigger className="w-full sm:w-[180px] bg-accent/20 h-10 border-border capitalize">
-            <SelectValue placeholder="All Platforms" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Platforms</SelectItem>
-            {uniquePlatforms.map((plat) => (
-              <SelectItem key={plat} value={plat} className="capitalize">
-                {plat}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-muted-foreground shrink-0">Platform:</span>
+          <Select value={platformFilter} onValueChange={(val) => setPlatformFilter(val || "all")}>
+            <SelectTrigger className="w-full sm:w-[180px] bg-accent/20 h-10 border-border capitalize">
+              <SelectValue placeholder="All Platforms" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Platforms</SelectItem>
+              {uniquePlatforms.map((plat) => (
+                <SelectItem key={plat} value={plat} className="capitalize">
+                  {plat}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
       {/* Bulk Actions Toolbar */}
