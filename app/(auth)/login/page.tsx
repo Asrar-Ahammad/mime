@@ -12,7 +12,7 @@ export default async function LoginPage() {
   }
 
   return (
-    <div className="relative flex min-h-screen w-screen items-center justify-center overflow-hidden bg-background">
+    <div className="relative flex min-h-[100dvh] w-full items-center justify-center overflow-hidden bg-background pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)] pl-[env(safe-area-inset-left)] pr-[env(safe-area-inset-right)]">
       {/* Ambient background glows */}
       <div className="absolute top-1/4 left-1/4 h-[400px] w-[400px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-primary/10 blur-[120px]" />
       <div className="absolute bottom-1/4 right-1/4 h-[400px] w-[400px] translate-x-1/2 translate-y-1/2 rounded-full bg-status-interviewing/10 blur-[120px]" />

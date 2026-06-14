@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { GearSix, FloppyDisk, Plus, X, Sparkle, Clock } from "@phosphor-icons/react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { PwaInstallPrompt } from "./pwa-install-prompt";
 
 interface AgentConfigData {
   id?: string;
@@ -380,53 +381,15 @@ export function SettingsClient({ initialConfig, saveAction }: SettingsClientProp
               <div className="space-y-2.5 rounded-lg border border-border/40 bg-accent/10 p-4">
                 <label className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                   <Clock size={14} className="text-primary" />
-                  Daily Inbox Sync Time
+                  Daily Inbox Sync
                 </label>
                 <div className="flex gap-2 items-center">
-                  <div className="flex-1">
-                    <select
-                      value={config.syncHour ?? 6}
-                      onChange={(e) =>
-                        setConfig((prev) => ({
-                          ...prev,
-                          syncHour: parseInt(e.target.value) ?? 6,
-                        }))
-                      }
-                      className="w-full bg-background/50 border border-border/40 rounded-md p-1.5 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary cursor-pointer"
-                    >
-                      {Array.from({ length: 24 }).map((_, i) => {
-                        const ampm = i >= 12 ? "PM" : "AM";
-                        const displayHour = i % 12 === 0 ? 12 : i % 12;
-                        return (
-                          <option key={i} value={i} className="bg-background text-foreground">
-                            {displayHour} {ampm} ({i.toString().padStart(2, "0")}:00)
-                          </option>
-                        );
-                      })}
-                    </select>
-                  </div>
-                  <span className="text-muted-foreground font-semibold">:</span>
-                  <div className="flex-1">
-                    <select
-                      value={config.syncMinute ?? 0}
-                      onChange={(e) =>
-                        setConfig((prev) => ({
-                          ...prev,
-                          syncMinute: parseInt(e.target.value) ?? 0,
-                        }))
-                      }
-                      className="w-full bg-background/50 border border-border/40 rounded-md p-1.5 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary cursor-pointer"
-                    >
-                      {[0, 15, 30, 45].map((min) => (
-                        <option key={min} value={min} className="bg-background text-foreground">
-                          {min.toString().padStart(2, "0")}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
+                  <p className="text-sm text-foreground">
+                    Inbox sync runs automatically once per day.
+                  </p>
                 </div>
                 <p className="text-[10px] text-muted-foreground leading-normal">
-                  Checks for status updates from Gmail at {(config.syncHour ?? 6).toString().padStart(2, "0")}:{(config.syncMinute ?? 0).toString().padStart(2, "0")} daily.
+                  Mime checks for status updates from Gmail globally at midnight UTC.
                 </p>
               </div>
 
@@ -450,6 +413,9 @@ export function SettingsClient({ initialConfig, saveAction }: SettingsClientProp
               </Button>
             </CardContent>
           </Card>
+          
+          {/* PWA Install Prompt */}
+          <PwaInstallPrompt />
         </div>
       </div>
     </div>

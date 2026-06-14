@@ -65,7 +65,7 @@ export async function fetchGmailThreads(userId: string): Promise<GmailThreadInfo
     const listRes = await gmail.users.threads.list({
       userId: "me",
       q: query,
-      maxResults: 30,
+      maxResults: 10,
     });
 
     const threads = listRes.data.threads || [];

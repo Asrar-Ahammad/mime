@@ -4,21 +4,39 @@ import { syncUserEmails } from "@/lib/email/email-parser";
 
 export async function GET(request: Request) {
   try {
+    // Vercel Cron Secret Check
+    const authHeader = request.headers.get('authorization');
+    if (process.env.CRON_SECRET && authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+      return new NextResponse('Unauthorized', { status: 401 });
+    }
+
     // Universal sync scopes execution for all users in the system
     const users = await db.user.findMany({ select: { id: true, email: true } });
     console.log(`[Cron Sync] Starting sync for ${users.length} users...`);
     
     let totalSyncCount = 0;
-    const results = [];
+    const results: any[] = [];
 
-    for (const user of users) {
+    // Parallelize execution with Promise.allSettled to speed up processing
+    const syncPromises = users.map(async (user) => {
       try {
         const count = await syncUserEmails(user.id);
-        totalSyncCount += count;
-        results.push({ userId: user.id, email: user.email, success: true, count });
+        return { userId: user.id, email: user.email, success: true, count };
       } catch (err: any) {
         console.error(`[Cron Sync] Sync failed for user ${user.id}:`, err);
-        results.push({ userId: user.id, email: user.email, success: false, error: err.message });
+        return { userId: user.id, email: user.email, success: false, error: err.message };
+      }
+    });
+
+    const settledResults = await Promise.allSettled(syncPromises);
+
+    for (const result of settledResults) {
+      if (result.status === 'fulfilled') {
+        const value = result.value;
+        results.push(value);
+        if (value.success && value.count) {
+          totalSyncCount += value.count;
+        }
       }
     }
 
