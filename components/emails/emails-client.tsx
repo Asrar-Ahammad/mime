@@ -506,7 +506,7 @@ export function EmailsClient({
 
                         {/* Actions */}
                         <td className="px-6 py-4 text-right" onClick={(e) => e.stopPropagation()}>
-                          <div className="flex justify-end gap-1.5 opacity-0 group-hover:opacity-100 transition-smooth">
+                          <div className="flex justify-end gap-1.5 transition-smooth">
                             <Button
                               variant="ghost"
                               size="icon"
