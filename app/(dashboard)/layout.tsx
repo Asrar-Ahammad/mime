@@ -25,7 +25,7 @@ export default async function DashboardLayout({
         <Topbar user={session.user} />
 
         {/* Dynamic Page Content */}
-        <main className="flex-1 overflow-y-auto min-w-0 w-full p-6 animate-fade-in">
+        <main className="flex-1 overflow-y-auto min-w-0 w-full p-4 sm:p-6 animate-fade-in">
           {children}
         </main>
       </div>

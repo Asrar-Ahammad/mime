@@ -241,7 +241,7 @@ export function ResumesClient({
         {/* Left Side: Upload & List */}
         <div className="space-y-6 lg:col-span-1 w-full min-w-0">
           {/* Upload Box */}
-          <Card className="glass-card border-border/40 shadow-lg">
+          <Card className="glass-card border-border/40 shadow-lg w-full min-w-0">
             <CardHeader className="pb-3">
               <CardTitle className="text-base font-semibold">Upload Resume</CardTitle>
               <CardDescription>Drag and drop your master PDF resume here</CardDescription>
@@ -270,7 +270,7 @@ export function ResumesClient({
           </Card>
 
           {/* Resume List */}
-          <Card className="glass-card border-border/40 shadow-lg">
+          <Card className="glass-card border-border/40 shadow-lg w-full min-w-0">
             <CardHeader className="pb-3">
               <CardTitle className="text-base font-semibold">My Resumes</CardTitle>
               <CardDescription>All master and tailored resume variants</CardDescription>
@@ -326,7 +326,7 @@ export function ResumesClient({
           {selectedResume ? (
             <>
               {/* Detail view of the selected resume */}
-              <Card className="glass-card border-border/40 shadow-lg">
+              <Card className="glass-card border-border/40 shadow-lg w-full min-w-0">
                 <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between pb-4 border-b border-border/20">
                   <div className="space-y-1 pr-4 flex-1">
                     {isEditingName ? (
@@ -378,22 +378,22 @@ export function ResumesClient({
                         </Button>
                       </div>
                     )}
-                    <div className="flex flex-wrap gap-x-4 gap-y-1.5 text-xs text-muted-foreground">
+                    <div className="flex flex-wrap gap-x-4 gap-y-1.5 text-xs text-muted-foreground w-full min-w-0">
                       {selectedResume.parsedContent?.contact?.email && (
-                        <span className="flex items-center gap-1">
-                          <Envelope size={14} />
+                        <span className="flex items-center gap-1 min-w-0 break-all">
+                          <Envelope size={14} className="shrink-0" />
                           {selectedResume.parsedContent.contact.email}
                         </span>
                       )}
                       {selectedResume.parsedContent?.contact?.phone && (
-                        <span className="flex items-center gap-1">
-                          <Phone size={14} />
+                        <span className="flex items-center gap-1 min-w-0 break-all">
+                          <Phone size={14} className="shrink-0" />
                           {selectedResume.parsedContent.contact.phone}
                         </span>
                       )}
                       {selectedResume.parsedContent?.contact?.location && (
-                        <span className="flex items-center gap-1">
-                          <MapPin size={14} />
+                        <span className="flex items-center gap-1 min-w-0 break-all">
+                          <MapPin size={14} className="shrink-0" />
                           {selectedResume.parsedContent.contact.location}
                         </span>
                       )}
@@ -472,14 +472,14 @@ export function ResumesClient({
                       <h3 className="text-xs font-semibold uppercase tracking-wider text-primary">Work Experience</h3>
                       <div className="space-y-4 divide-y divide-border/20">
                         {selectedResume.parsedContent.experience.map((exp: any, idx: number) => (
-                          <div key={idx} className={cn("space-y-1.5", idx > 0 && "pt-3.5")}>
-                            <div className="flex items-center justify-between">
-                              <h4 className="text-xs font-bold text-foreground">{exp.title}</h4>
-                              <span className="text-[10px] text-muted-foreground">
+                          <div key={idx} className={cn("space-y-1.5 w-full min-w-0", idx > 0 && "pt-3.5")}>
+                            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 w-full min-w-0">
+                              <h4 className="text-xs font-bold text-foreground truncate">{exp.title}</h4>
+                              <span className="text-[10px] text-muted-foreground shrink-0">
                                 {exp.startDate} – {exp.endDate || "Present"}
                               </span>
                             </div>
-                            <p className="text-[11px] font-semibold text-muted-foreground">
+                            <p className="text-[11px] font-semibold text-muted-foreground truncate">
                               {exp.company} {exp.location && `| ${exp.location}`}
                             </p>
                             {exp.bullets && exp.bullets.length > 0 && (
@@ -503,11 +503,11 @@ export function ResumesClient({
                       <h3 className="text-xs font-semibold uppercase tracking-wider text-primary">Projects</h3>
                       <div className="space-y-4 divide-y divide-border/20">
                         {selectedResume.parsedContent.projects.map((proj: any, idx: number) => (
-                          <div key={idx} className={cn("space-y-1.5", idx > 0 && "pt-3.5")}>
-                            <div className="flex items-center justify-between">
-                              <h4 className="text-xs font-bold text-foreground">{proj.name}</h4>
+                          <div key={idx} className={cn("space-y-1.5 w-full min-w-0", idx > 0 && "pt-3.5")}>
+                            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 w-full min-w-0">
+                              <h4 className="text-xs font-bold text-foreground truncate">{proj.name}</h4>
                               {proj.url && (
-                                <a href={proj.url} target="_blank" rel="noreferrer" className="text-[10px] text-primary hover:underline">
+                                <a href={proj.url} target="_blank" rel="noreferrer" className="text-[10px] text-primary hover:underline shrink-0">
                                   View Project
                                 </a>
                               )}
@@ -545,11 +545,11 @@ export function ResumesClient({
                       <h3 className="text-xs font-semibold uppercase tracking-wider text-primary">Publications</h3>
                       <div className="space-y-4 divide-y divide-border/20">
                         {selectedResume.parsedContent.publications.map((pub: any, idx: number) => (
-                          <div key={idx} className={cn("space-y-1.5", idx > 0 && "pt-3.5")}>
-                            <div className="flex items-center justify-between">
-                              <h4 className="text-xs font-bold text-foreground">{pub.title}</h4>
+                          <div key={idx} className={cn("space-y-1.5 w-full min-w-0", idx > 0 && "pt-3.5")}>
+                            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 w-full min-w-0">
+                              <h4 className="text-xs font-bold text-foreground truncate">{pub.title}</h4>
                               {pub.date && (
-                                <span className="text-[10px] text-muted-foreground">
+                                <span className="text-[10px] text-muted-foreground shrink-0">
                                   {pub.date}
                                 </span>
                               )}
@@ -574,20 +574,20 @@ export function ResumesClient({
                       <h3 className="text-xs font-semibold uppercase tracking-wider text-primary">Education</h3>
                       <div className="space-y-4 divide-y divide-border/20">
                         {selectedResume.parsedContent.education.map((edu: any, idx: number) => (
-                          <div key={idx} className={cn("space-y-1", idx > 0 && "pt-3.5")}>
-                            <div className="flex items-center justify-between">
-                              <h4 className="text-xs font-bold text-foreground">{edu.degree}</h4>
+                          <div key={idx} className={cn("space-y-1 w-full min-w-0", idx > 0 && "pt-3.5")}>
+                            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 w-full min-w-0">
+                              <h4 className="text-xs font-bold text-foreground truncate">{edu.degree}</h4>
                               {edu.graduationDate && (
-                                <span className="text-[10px] text-muted-foreground">
+                                <span className="text-[10px] text-muted-foreground shrink-0">
                                   {edu.graduationDate}
                                 </span>
                               )}
                             </div>
-                            <div className="flex items-center justify-between text-[11px] text-muted-foreground mt-0.5">
-                              <span>
+                            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 text-[11px] text-muted-foreground mt-0.5 w-full min-w-0">
+                              <span className="truncate">
                                 {edu.institution} {edu.location && `| ${edu.location}`}
                               </span>
-                              {edu.gpa && <span>GPA: {edu.gpa}</span>}
+                              {edu.gpa && <span className="shrink-0">GPA: {edu.gpa}</span>}
                             </div>
                           </div>
                         ))}
@@ -612,7 +612,7 @@ export function ResumesClient({
               </Card>
 
               {/* Tailor This Resume Form */}
-              <Card className="glass-card border-border/40 shadow-lg">
+              <Card className="glass-card border-border/40 shadow-lg w-full min-w-0">
                 <CardHeader>
                   <CardTitle className="text-base font-semibold flex items-center gap-1.5">
                     <Sparkle size={18} className="text-primary animate-pulse" />
