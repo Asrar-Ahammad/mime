@@ -631,7 +631,7 @@ export function ApplicationsClient({
 
                     {/* Actions Column */}
                     <td className="px-6 py-4 text-right" onClick={(e) => e.stopPropagation()}>
-                      <div className="flex justify-end gap-1.5 opacity-0 group-hover:opacity-100 transition-smooth">
+                      <div className="flex justify-end gap-1.5 transition-smooth">
                         <a
                           href={app.jobUrl}
                           target="_blank"
