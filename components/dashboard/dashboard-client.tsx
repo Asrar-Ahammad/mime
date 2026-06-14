@@ -206,7 +206,7 @@ export function DashboardClient({
             title="Run AI Agent"
           >
             <Play size={16} weight="fill" />
-            <span className="hidden sm:inline">Run AI Agent</span>
+            <span>Run AI Agent</span>
           </Link>
           <Link
             href="/resumes"
@@ -217,7 +217,7 @@ export function DashboardClient({
             title="Tailor Resume"
           >
             <Plus size={16} />
-            <span className="hidden sm:inline">Tailor Resume</span>
+            <span>Tailor Resume</span>
           </Link>
         </div>
       </div>

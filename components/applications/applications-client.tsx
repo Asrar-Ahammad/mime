@@ -130,6 +130,11 @@ export function ApplicationsClient({
     notes: "",
   });
 
+
+
+  const [careersSearchOpen, setCareersSearchOpen] = useState(false);
+  const [careersSearchQuery, setCareersSearchQuery] = useState("");
+
   const router = useRouter();
 
   useEffect(() => {
@@ -322,44 +327,87 @@ export function ApplicationsClient({
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight text-foreground">Applications</h1>
           <p className="text-sm text-muted-foreground hidden sm:block">
             View and manage job applications tracked by Mime or submitted by you.
           </p>
         </div>
-        <Button onClick={() => setAddOpen(true)} className="gap-1.5 sm:gap-2">
+        <Button onClick={() => setAddOpen(true)} className="gap-1.5 sm:gap-2 shrink-0">
           <Plus size={16} weight="bold" />
-          <span className="hidden sm:inline">Add Application</span>
+          <span>Add Application</span>
         </Button>
+      </div>
+
+      {/* Hiring Platforms Quick Links */}
+      <div className="flex flex-wrap items-center gap-2.5 text-xs rounded-xl bg-accent/5 border border-border/20 p-3">
+        <span className="font-semibold text-muted-foreground uppercase tracking-wider text-[10px] mr-1">
+          Hiring Platforms:
+        </span>
+        {[
+          { name: "Wellfound", url: "https://wellfound.com/jobs" },
+          { name: "Instahyre", url: "https://www.instahyre.com" },
+          { name: "Naukri", url: "https://www.naukri.com" },
+          { name: "Indeed", url: "https://www.indeed.com" },
+          { name: "LinkedIn", url: "https://www.linkedin.com/jobs" },
+        ].map((platform) => (
+          <a
+            key={platform.name}
+            href={platform.url}
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex items-center gap-1 rounded-lg bg-background px-2.5 py-1 text-xs font-semibold text-muted-foreground border border-border/40 hover:text-foreground hover:border-primary/50 hover:bg-accent/20 transition-all duration-200"
+          >
+            {platform.name}
+            <ArrowSquareOut size={12} className="opacity-70" />
+          </a>
+        ))}
       </div>
 
       {/* Filter Toolbar */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
         {/* Search */}
-        <div className="relative flex-1">
-          <MagnifyingGlass
-            size={18}
-            className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
-          />
-          <Input
-            placeholder="Search by company or role..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10 h-10 bg-accent/20 transition-smooth focus-visible:bg-accent/40"
-          />
+        <div className="relative flex-1 flex gap-2">
+          <div className="relative flex-1">
+            <MagnifyingGlass
+              size={18}
+              className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+            />
+            <Input
+              placeholder="Search by company or role..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10 h-10 bg-accent/20 transition-smooth focus-visible:bg-accent/40 w-full"
+            />
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              if (searchTerm.trim()) {
+                window.open(`https://www.google.com/search?q=${encodeURIComponent(searchTerm.trim() + " careers")}`, "_blank");
+              } else {
+                setCareersSearchOpen(true);
+              }
+            }}
+            className="h-10 border border-border/60 text-muted-foreground hover:text-foreground hover:bg-accent/30 gap-1.5 shrink-0 px-3 transition-all duration-200"
+            title="Search any company's career page on Google"
+          >
+            <ArrowSquareOut size={14} className="text-primary/70" />
+            <span>Search Careers</span>
+          </Button>
         </div>
 
         {/* Status Filter */}
         <Select value={statusFilter} onValueChange={(val) => setStatusFilter(val || "all")}>
-          <SelectTrigger className="w-full sm:w-[180px] bg-accent/20 h-10 border-border">
+          <SelectTrigger className="w-full sm:w-[180px] bg-accent/20 h-10 border-border capitalize">
             <SelectValue placeholder="All Statuses" />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Statuses</SelectItem>
             {availableStatuses.map((st) => (
-              <SelectItem key={st} value={st}>
+              <SelectItem key={st} value={st} className="capitalize">
                 {st.toLowerCase()}
               </SelectItem>
             ))}
@@ -368,16 +416,16 @@ export function ApplicationsClient({
 
         {/* Platform Filter */}
         <Select value={platformFilter} onValueChange={(val) => setPlatformFilter(val || "all")}>
-          <SelectTrigger className="w-full sm:w-[180px] bg-accent/20 h-10 border-border">
+          <SelectTrigger className="w-full sm:w-[180px] bg-accent/20 h-10 border-border capitalize">
             <SelectValue placeholder="All Platforms" />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Platforms</SelectItem>
-            <SelectItem value="naukri">Naukri</SelectItem>
-            <SelectItem value="instahyre">Instahyre</SelectItem>
-            <SelectItem value="wellfound">Wellfound</SelectItem>
-            <SelectItem value="indeed">Indeed</SelectItem>
-            <SelectItem value="direct">Direct</SelectItem>
+            <SelectItem value="naukri" className="capitalize">Naukri</SelectItem>
+            <SelectItem value="instahyre" className="capitalize">Instahyre</SelectItem>
+            <SelectItem value="wellfound" className="capitalize">Wellfound</SelectItem>
+            <SelectItem value="indeed" className="capitalize">Indeed</SelectItem>
+            <SelectItem value="direct" className="capitalize">Direct</SelectItem>
           </SelectContent>
         </Select>
       </div>
@@ -512,7 +560,7 @@ export function ApplicationsClient({
                       >
                         <SelectTrigger
                           className={cn(
-                            "h-7 w-[130px] rounded-full border px-2.5 text-xs font-medium py-0 transition-smooth",
+                            "h-7 w-[130px] rounded-full border px-2.5 text-xs font-medium py-0 transition-smooth capitalize",
                             statusColors[app.status]
                           )}
                         >
@@ -520,7 +568,7 @@ export function ApplicationsClient({
                         </SelectTrigger>
                         <SelectContent>
                           {availableStatuses.map((st) => (
-                            <SelectItem key={st} value={st} className="text-xs">
+                            <SelectItem key={st} value={st} className="text-xs capitalize">
                               {st.toLowerCase()}
                             </SelectItem>
                           ))}
@@ -615,12 +663,12 @@ export function ApplicationsClient({
                       if (val) handleStatusChange(selectedApp.id, val as ApplicationStatus);
                     }}
                   >
-                    <SelectTrigger className={cn("h-8 w-[140px] text-xs font-semibold rounded-md border", statusColors[selectedApp.status])}>
+                    <SelectTrigger className={cn("h-8 w-[140px] text-xs font-semibold rounded-md border capitalize", statusColors[selectedApp.status])}>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
                       {availableStatuses.map((st) => (
-                        <SelectItem key={st} value={st} className="text-xs">
+                        <SelectItem key={st} value={st} className="text-xs capitalize">
                           {st.toLowerCase()}
                         </SelectItem>
                       ))}
@@ -828,6 +876,44 @@ export function ApplicationsClient({
         </DialogContent>
       </Dialog>
 
+      {/* Search Careers Dialog */}
+      <Dialog open={careersSearchOpen} onOpenChange={setCareersSearchOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <ArrowSquareOut size={20} className="text-primary" />
+              Find Company Careers Page
+            </DialogTitle>
+            <DialogDescription>
+              Enter a company name to find and open their official careers page.
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={(e) => {
+            e.preventDefault();
+            if (!careersSearchQuery.trim()) return;
+            window.open(`https://www.google.com/search?q=${encodeURIComponent(careersSearchQuery.trim() + " careers")}`, "_blank");
+            setCareersSearchOpen(false);
+            setCareersSearchQuery("");
+          }} className="space-y-4 pt-2">
+            <Input
+              placeholder="e.g. Stripe, OpenAI, Google..."
+              value={careersSearchQuery}
+              onChange={(e) => setCareersSearchQuery(e.target.value)}
+              className="bg-accent/10 border-border/40 focus-visible:bg-accent/20 text-sm h-10"
+              autoFocus
+            />
+            <DialogFooter className="sm:justify-end gap-2">
+              <DialogClose render={<Button variant="outline" size="sm" />}>
+                Cancel
+              </DialogClose>
+              <Button type="submit" disabled={!careersSearchQuery.trim()} className="font-semibold">
+                Search & Open
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
       {/* Add Application Sheet Modal */}
       <Sheet open={addOpen} onOpenChange={setAddOpen}>
         <SheetContent className="w-full sm:max-w-md overflow-y-auto bg-card border-l border-border/40">
@@ -871,15 +957,15 @@ export function ApplicationsClient({
                 value={addForm.platform}
                 onValueChange={(val) => setAddForm(prev => ({ ...prev, platform: val || "direct" }))}
               >
-                <SelectTrigger className="bg-accent/10 border-border/40">
+                <SelectTrigger className="bg-accent/10 border-border/40 capitalize">
                   <SelectValue placeholder="Select platform" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="direct">Direct</SelectItem>
-                  <SelectItem value="naukri">Naukri</SelectItem>
-                  <SelectItem value="instahyre">Instahyre</SelectItem>
-                  <SelectItem value="wellfound">Wellfound</SelectItem>
-                  <SelectItem value="indeed">Indeed</SelectItem>
+                  <SelectItem value="direct" className="capitalize">Direct</SelectItem>
+                  <SelectItem value="naukri" className="capitalize">Naukri</SelectItem>
+                  <SelectItem value="instahyre" className="capitalize">Instahyre</SelectItem>
+                  <SelectItem value="wellfound" className="capitalize">Wellfound</SelectItem>
+                  <SelectItem value="indeed" className="capitalize">Indeed</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -889,12 +975,12 @@ export function ApplicationsClient({
                 value={addForm.status}
                 onValueChange={(val) => setAddForm(prev => ({ ...prev, status: (val || "APPLIED") as ApplicationStatus }))}
               >
-                <SelectTrigger className="bg-accent/10 border-border/40">
+                <SelectTrigger className="bg-accent/10 border-border/40 capitalize">
                   <SelectValue placeholder="Select status" />
                 </SelectTrigger>
                 <SelectContent>
                   {availableStatuses.map((st) => (
-                    <SelectItem key={st} value={st} className="text-xs">
+                    <SelectItem key={st} value={st} className="text-xs capitalize">
                       {st.toLowerCase()}
                     </SelectItem>
                   ))}

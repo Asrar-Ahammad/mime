@@ -75,6 +75,7 @@ export function ResumesClient({
 
   const [uploading, setUploading] = useState(false);
   const [tailoring, setTailoring] = useState(false);
+  const [tailorOpen, setTailorOpen] = useState(false);
   const [jobTitle, setJobTitle] = useState("");
   const [company, setCompany] = useState("");
   const [jobDesc, setJobDesc] = useState("");
@@ -216,6 +217,7 @@ export function ResumesClient({
         setJobTitle("");
         setCompany("");
         setJobDesc("");
+        setTailorOpen(false);
         toast.success("Resume tailored successfully!");
       } else {
         toast.error(result.error || "Failed to tailor resume.");
@@ -230,11 +232,19 @@ export function ResumesClient({
   return (
     <div className="space-y-6 w-full min-w-0">
       {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight text-foreground">Resumes</h1>
-        <p className="text-sm text-muted-foreground hidden sm:block">
-          Upload your master resume and generate tailored variants optimized for specific job roles.
-        </p>
+      <div className="flex items-center justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight text-foreground">Resumes</h1>
+          <p className="text-sm text-muted-foreground hidden sm:block">
+            Upload your master resume and generate tailored variants optimized for specific job roles.
+          </p>
+        </div>
+        {selectedResume && (
+          <Button onClick={() => setTailorOpen(true)} className="gap-1.5 sm:gap-2 shrink-0">
+            <Sparkle size={16} weight="fill" />
+            <span>Tailor Resume</span>
+          </Button>
+        )}
       </div>
 
       <div className="grid gap-6 lg:grid-cols-3 w-full min-w-0">
@@ -611,76 +621,6 @@ export function ResumesClient({
                 </CardContent>
               </Card>
 
-              {/* Tailor This Resume Form */}
-              <Card className="glass-card border-border/40 shadow-lg w-full min-w-0">
-                <CardHeader>
-                  <CardTitle className="text-base font-semibold flex items-center gap-1.5">
-                    <Sparkle size={18} className="text-primary animate-pulse" />
-                    Tailor for a Specific Job
-                  </CardTitle>
-                  <CardDescription>AI will tailor your resume bullets and skills targeting this job profile</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <form onSubmit={handleTailor} className="space-y-4">
-                    <div className="grid gap-4 sm:grid-cols-2">
-                      <div className="space-y-1.5">
-                        <label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                          Job Title
-                        </label>
-                        <Input
-                          placeholder="e.g. Senior Frontend Developer"
-                          value={jobTitle}
-                          onChange={(e) => setJobTitle(e.target.value)}
-                          className="bg-accent/20 text-xs h-9"
-                          required
-                        />
-                      </div>
-                      <div className="space-y-1.5">
-                        <label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                          Company Name
-                        </label>
-                        <Input
-                          placeholder="e.g. Google"
-                          value={company}
-                          onChange={(e) => setCompany(e.target.value)}
-                          className="bg-accent/20 text-xs h-9"
-                          required
-                        />
-                      </div>
-                    </div>
-                    <div className="space-y-1.5">
-                      <label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                        Job Description
-                      </label>
-                      <Textarea
-                        placeholder="Paste job details, key qualifications, and tech stack here..."
-                        value={jobDesc}
-                        onChange={(e) => setJobDesc(e.target.value)}
-                        rows={4}
-                        className="bg-accent/20 text-xs"
-                        required
-                      />
-                    </div>
-                    <Button
-                      type="submit"
-                      disabled={tailoring}
-                      className="w-full h-9 bg-primary hover:bg-primary/95 text-primary-foreground font-semibold gap-1.5 transition-smooth"
-                    >
-                      {tailoring ? (
-                        <>
-                          <Spinner size={16} className="animate-spin" />
-                          Tailoring Resume...
-                        </>
-                      ) : (
-                        <>
-                          <Sparkle size={16} weight="fill" />
-                          Tailor Resume with AI
-                        </>
-                      )}
-                    </Button>
-                  </form>
-                </CardContent>
-              </Card>
             </>
           ) : (
             <div className="flex flex-col items-center justify-center py-20 text-sm text-muted-foreground text-center border rounded-xl border-dashed border-border/40 bg-card p-6 h-[400px]">
@@ -714,6 +654,81 @@ export function ResumesClient({
               Delete
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Tailor Resume Dialog Modal */}
+      <Dialog open={tailorOpen} onOpenChange={setTailorOpen}>
+        <DialogContent className="sm:max-w-md bg-card border border-border/40 max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Sparkle size={20} className="text-primary animate-pulse" />
+              Tailor Resume with AI
+            </DialogTitle>
+            <DialogDescription>
+              AI will tailor your resume bullets and skills targeting this job profile.
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleTailor} className="space-y-4 pt-2">
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                  Job Title
+                </label>
+                <Input
+                  placeholder="e.g. Senior Frontend Developer"
+                  value={jobTitle}
+                  onChange={(e) => setJobTitle(e.target.value)}
+                  className="bg-accent/10 border-border/40 focus-visible:bg-accent/20 text-xs h-9"
+                  required
+                  autoFocus
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                  Company Name
+                </label>
+                <Input
+                  placeholder="e.g. Google"
+                  value={company}
+                  onChange={(e) => setCompany(e.target.value)}
+                  className="bg-accent/10 border-border/40 focus-visible:bg-accent/20 text-xs h-9"
+                  required
+                />
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                Job Description
+              </label>
+              <Textarea
+                placeholder="Paste job details, key qualifications, and tech stack here..."
+                value={jobDesc}
+                onChange={(e) => setJobDesc(e.target.value)}
+                className="bg-accent/10 border-border/40 focus-visible:bg-accent/20 text-xs h-40 resize-none overflow-y-auto"
+                required
+              />
+            </div>
+            <DialogFooter className="sm:justify-end gap-2">
+              <DialogClose render={<Button variant="outline" size="sm" />}>
+                Cancel
+              </DialogClose>
+              <Button
+                type="submit"
+                disabled={tailoring}
+                className="font-semibold"
+              >
+                {tailoring ? (
+                  <>
+                    <Spinner size={16} className="animate-spin mr-1" />
+                    Tailoring...
+                  </>
+                ) : (
+                  "Tailor Resume"
+                )}
+              </Button>
+            </DialogFooter>
+          </form>
         </DialogContent>
       </Dialog>
     </div>
