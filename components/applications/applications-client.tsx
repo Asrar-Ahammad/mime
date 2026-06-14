@@ -388,6 +388,7 @@ export function ApplicationsClient({
           Hiring Platforms:
         </span>
         {[
+          { name: "YCombinator", url: "https://www.ycombinator.com/jobs" },
           { name: "Wellfound", url: "https://wellfound.com/jobs" },
           { name: "Instahyre", url: "https://www.instahyre.com" },
           { name: "Naukri", url: "https://www.naukri.com" },
