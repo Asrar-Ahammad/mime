@@ -8,7 +8,7 @@ import {
   Building,
   Warning,
   Trash,
-  EnvelopeOpenIcon,
+  EnvelopeOpen,
   MagnifyingGlass,
 } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
@@ -337,7 +337,7 @@ export function EmailsClient({
       <div className="rounded-xl border border-border bg-card shadow-lg overflow-hidden">
         {filteredEmails.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 text-sm text-muted-foreground">
-            <EnvelopeOpenIcon size={48} className="text-muted-foreground/30 mb-4" />
+            <EnvelopeOpen size={48} className="text-muted-foreground/30 mb-4" />
             No email threads found. Sync your inbox to start tracking.
           </div>
         ) : (
