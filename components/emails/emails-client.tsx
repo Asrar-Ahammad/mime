@@ -318,9 +318,18 @@ export function EmailsClient({
       {/* Batch Actions Bar */}
       {selectedThreadIds.size > 0 && (
         <div className="flex items-center justify-between border border-destructive/20 bg-destructive/5 p-3 rounded-lg text-xs animate-in fade-in slide-in-from-top-1">
-          <span className="font-semibold text-destructive">
-            {selectedThreadIds.size} thread{selectedThreadIds.size > 1 ? "s" : ""} selected for deletion
-          </span>
+          <div className="flex items-center gap-3">
+            <span className="font-semibold text-destructive">
+              {selectedThreadIds.size} thread{selectedThreadIds.size > 1 ? "s" : ""} selected
+            </span>
+            <span className="text-muted-foreground/30">|</span>
+            <button
+              onClick={() => setSelectedThreadIds(new Set())}
+              className="text-muted-foreground hover:text-foreground underline transition-colors cursor-pointer font-medium"
+            >
+              Clear selection
+            </button>
+          </div>
           <Button
             variant="destructive"
             size="sm"
