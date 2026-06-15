@@ -94,8 +94,7 @@ export default async function DashboardPage() {
     const dayApplied = await db.application.count({
       where: {
         userId,
-        status: "APPLIED",
-        appliedAt: {
+        createdAt: {
           gte: startOfDay,
           lte: endOfDay,
         },

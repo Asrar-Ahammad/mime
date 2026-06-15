@@ -189,7 +189,7 @@ export function DashboardClient({
                   }}
                 />
                 <Area
-                  type="monotone"
+                  type="linear"
                   dataKey="applied"
                   name="Applications"
                   stroke="var(--color-status-applied)"
@@ -198,7 +198,7 @@ export function DashboardClient({
                   fill="url(#appliedColor)"
                 />
                 <Area
-                  type="monotone"
+                  type="linear"
                   dataKey="interviews"
                   name="Interviews"
                   stroke="var(--color-status-interviewing)"

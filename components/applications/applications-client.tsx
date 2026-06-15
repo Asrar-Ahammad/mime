@@ -529,7 +529,7 @@ export function ApplicationsClient({
                   <th className="px-6 py-4">Platform</th>
                   <th className="px-6 py-4">AI Score</th>
                   <th className="px-6 py-4">Status</th>
-                  <th className="px-6 py-4">Applied</th>
+                  <th className="px-6 py-4">Date</th>
                   <th className="px-6 py-4 text-right">Actions</th>
                 </tr>
               </thead>
@@ -625,15 +625,24 @@ export function ApplicationsClient({
                       </Select>
                     </td>
 
-                    {/* Applied Date */}
+                    {/* Date (from email or appliedAt) */}
                     <td className="px-6 py-4 text-xs text-muted-foreground">
-                      {app.appliedAt
-                        ? new Date(app.appliedAt).toLocaleDateString("en-US", {
-                            year: "numeric",
-                            month: "short",
-                            day: "numeric",
-                          })
-                        : "Not applied"}
+                      {(() => {
+                        let displayDate = app.appliedAt;
+                        if (app.emailThreads && app.emailThreads.length > 0) {
+                          const latestThread = [...app.emailThreads].sort(
+                            (a, b) => new Date(b.lastMessageDate).getTime() - new Date(a.lastMessageDate).getTime()
+                          )[0];
+                          displayDate = latestThread.lastMessageDate;
+                        }
+                        return displayDate
+                          ? new Date(displayDate).toLocaleDateString("en-US", {
+                              year: "numeric",
+                              month: "short",
+                              day: "numeric",
+                            })
+                          : "No date";
+                      })()}
                     </td>
 
                     {/* Actions Column */}
