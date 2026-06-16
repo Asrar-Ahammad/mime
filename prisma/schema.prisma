@@ -67,8 +67,8 @@ model Resume {
   id             String  @id @default(cuid())
   userId         String
   user           User    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  name           String // "Master Resume" / "Tailored for Google SWE"
-  originalFile   String // Path to uploaded file
+  name           String @default("Untitled Resume") // "Master Resume" / "Tailored for Google SWE"
+  originalFile   String @default("") // Path to uploaded file
   parsedContent  Json? // Structured resume data
   isMaster       Boolean @default(false)
   parentResumeId String? // Links tailored variant → master
