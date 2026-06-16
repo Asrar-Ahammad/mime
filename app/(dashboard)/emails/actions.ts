@@ -5,6 +5,14 @@ import { db } from "@/lib/db";
 import { syncUserEmails } from "@/lib/email/email-parser";
 import { revalidatePath } from "next/cache";
 
+const globalForSync = globalThis as unknown as {
+  activeSyncs: Set<string>;
+};
+
+if (!globalForSync.activeSyncs) {
+  globalForSync.activeSyncs = new Set<string>();
+}
+
 export async function syncEmailsAction() {
   const session = await auth();
   if (!session?.user) {
@@ -16,16 +24,34 @@ export async function syncEmailsAction() {
     return { success: false, error: "Unauthorized" };
   }
 
-  try {
-    const newCount = await syncUserEmails(userId);
-    revalidatePath("/emails");
-    revalidatePath("/");
-    revalidatePath("/applications");
-    return { success: true, count: newCount };
-  } catch (err: any) {
-    console.error("Email sync failed:", err);
-    return { success: false, error: err.message || "Failed to sync inbox" };
+  if (globalForSync.activeSyncs.has(userId)) {
+    return { success: true, background: true, message: "Sync already in progress" };
   }
+
+  // Kick off background job
+  globalForSync.activeSyncs.add(userId);
+  
+  // Fire and forget
+  Promise.resolve().then(async () => {
+    try {
+      await syncUserEmails(userId);
+    } catch (err) {
+      console.error("Background sync failed:", err);
+    } finally {
+      globalForSync.activeSyncs.delete(userId);
+    }
+  });
+
+  return { success: true, background: true };
+}
+
+export async function checkSyncStatusAction() {
+  const session = await auth();
+  if (!session?.user) return { isSyncing: false };
+  const userId = (session.user as any).id;
+  if (!userId) return { isSyncing: false };
+
+  return { isSyncing: globalForSync.activeSyncs.has(userId) };
 }
 
 export async function linkEmailAction(threadId: string, applicationId: string | null) {

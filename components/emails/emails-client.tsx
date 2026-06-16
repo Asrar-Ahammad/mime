@@ -73,6 +73,8 @@ interface EmailsClientProps {
   linkAction: (threadId: string, applicationId: string | null) => Promise<{ success: boolean; error?: string }>;
   deleteAction: (threadId: string) => Promise<{ success: boolean; error?: string }>;
   deleteMultipleAction: (threadIds: string[]) => Promise<{ success: boolean; error?: string }>;
+  checkSyncStatusAction: () => Promise<{ isSyncing: boolean }>;
+  initialIsSyncing: boolean;
   initialThreadId?: string;
 }
 
@@ -83,6 +85,8 @@ export function EmailsClient({
   linkAction,
   deleteAction,
   deleteMultipleAction,
+  checkSyncStatusAction,
+  initialIsSyncing,
   initialThreadId,
 }: EmailsClientProps) {
   const [emails, setEmails] = useState<EmailThread[]>(initialEmails);
@@ -91,7 +95,7 @@ export function EmailsClient({
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
   
-  const [syncing, setSyncing] = useState(false);
+  const [syncing, setSyncing] = useState(initialIsSyncing);
   const [selectedEmail, setSelectedEmail] = useState<EmailThread | null>(null);
   const [sheetWidth, setSheetWidth] = useState(672);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
@@ -225,21 +229,45 @@ export function EmailsClient({
     window.addEventListener("mouseup", stopResize);
   };
 
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    
+    const checkStatus = async () => {
+      try {
+        const { isSyncing } = await checkSyncStatusAction();
+        if (syncing && !isSyncing) {
+          // Sync just finished
+          toast.success("Background sync complete!");
+          window.location.reload();
+        }
+        setSyncing(isSyncing);
+      } catch (err) {
+        console.error("Failed to check sync status", err);
+      }
+    };
+
+    // Check immediately on mount
+    checkStatus();
+
+    // Poll every 3 seconds if we think it's syncing or to catch external syncs
+    interval = setInterval(checkStatus, 3000);
+
+    return () => clearInterval(interval);
+  }, [syncing, checkSyncStatusAction]);
+
   const handleSync = async () => {
+    if (syncing) return;
     setSyncing(true);
+    toast.info("Started syncing Gmail in the background...");
     try {
       const result = await syncAction();
-      if (result.success) {
-        toast.success(`Sync complete! Imported ${result.count || 0} new threads.`);
-        // Reload page data by refreshing window (simple & safe next.js reload pattern)
-        window.location.reload();
-      } else {
-        toast.error(result.error || "Failed to sync emails");
+      if (!result.success) {
+        setSyncing(false);
+        toast.error(result.error || "Failed to start sync");
       }
     } catch (err) {
-      toast.error("Email sync failed");
-    } finally {
       setSyncing(false);
+      toast.error("Email sync failed to start");
     }
   };
 

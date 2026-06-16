@@ -3,7 +3,7 @@ import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { redirect } from "next/navigation";
 import { EmailsClient } from "@/components/emails/emails-client";
-import { syncEmailsAction, linkEmailAction, deleteEmailAction, deleteEmailsAction } from "./actions";
+import { syncEmailsAction, linkEmailAction, deleteEmailAction, deleteEmailsAction, checkSyncStatusAction } from "./actions";
 
 interface PageProps {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
@@ -75,15 +75,20 @@ export default async function EmailsPage({ searchParams }: PageProps) {
     rawMessages: thread.rawMessages,
   }));
 
+  const syncStatusResult = await checkSyncStatusAction();
+  const initialIsSyncing = syncStatusResult.isSyncing;
+
   return (
     <Suspense fallback={<div className="p-8 text-center text-sm text-muted-foreground animate-pulse">Loading emails...</div>}>
       <EmailsClient
         initialEmails={formattedEmails}
         applications={formattedApplications}
+        initialIsSyncing={initialIsSyncing}
         syncAction={syncEmailsAction}
         linkAction={linkEmailAction}
         deleteAction={deleteEmailAction}
         deleteMultipleAction={deleteEmailsAction}
+        checkSyncStatusAction={checkSyncStatusAction}
         initialThreadId={initialThreadId}
       />
     </Suspense>
