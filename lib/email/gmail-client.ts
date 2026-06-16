@@ -60,12 +60,22 @@ export async function fetchGmailThreads(userId: string): Promise<GmailThreadInfo
 
     const gmail = google.gmail({ version: "v1", auth: oauth2Client });
 
-    // 3. List messages with broader queries matching job application updates
-    const query = "application OR interview OR job OR offer OR careers OR resume OR hiring OR recruit OR update";
+    // 3. Determine if this is the user's first sync
+    const existingCount = await db.emailThread.count({
+      where: { userId },
+    });
+    const isFirstSync = existingCount === 0;
+
+    // List messages with broader queries matching job application updates
+    let query = "application OR interview OR job OR offer OR careers OR resume OR hiring OR recruit OR update";
+    if (isFirstSync) {
+      query += " newer_than:7d";
+    }
+
     const listRes = await gmail.users.threads.list({
       userId: "me",
       q: query,
-      maxResults: 10,
+      maxResults: 200,
     });
 
     const threads = listRes.data.threads || [];
@@ -296,5 +306,55 @@ export function getMockEmailThreads(): GmailThreadInfo[] {
         }
       ],
     },
+    {
+      id: "thread-microsoft-1",
+      subject: "Thank you for your application!",
+      snippet: "Hi Shaik, Thank you for taking the time to submit your application for Software Engineer 2 (Job number: 200038919). We're glad you're interested in a career at Microsoft...",
+      sender: "Microsoft Careers <donotreply@email.careers.microsoft.com>",
+      lastMessageDate: new Date(Date.now() - 3600000 * 24 * 1),
+      rawMessages: [
+        {
+          id: "msg-microsoft-1",
+          snippet: "Hi Shaik, Thank you for taking the time to submit your application for Software Engineer 2 (Job number: 200038919)...",
+          payload: {
+            headers: [
+              { name: "From", value: "Microsoft Careers <donotreply@email.careers.microsoft.com>" },
+              { name: "Date", value: new Date(Date.now() - 3600000 * 24 * 1).toUTCString() }
+            ],
+            body: {
+              data: encodeBase64Url(`
+                <p>Hi Shaik,</p>
+                <p>Thank you for taking the time to submit your application for Software Engineer 2 (Job number: 200038919). We're glad you're interested in a career at Microsoft.</p>
+              `)
+            }
+          }
+        }
+      ]
+    },
+    {
+      id: "thread-microsoft-2",
+      subject: "Thank you for your application!",
+      snippet: "Hi Shaik, Thank you for taking the time to submit your application for Software Engineer 2 (Job number: 200038920). We're glad you're interested in a career at Microsoft...",
+      sender: "Microsoft Careers <donotreply@email.careers.microsoft.com>",
+      lastMessageDate: new Date(Date.now() - 3600000 * 24 * 1),
+      rawMessages: [
+        {
+          id: "msg-microsoft-2",
+          snippet: "Hi Shaik, Thank you for taking the time to submit your application for Software Engineer 2 (Job number: 200038920)...",
+          payload: {
+            headers: [
+              { name: "From", value: "Microsoft Careers <donotreply@email.careers.microsoft.com>" },
+              { name: "Date", value: new Date(Date.now() - 3600000 * 24 * 1).toUTCString() }
+            ],
+            body: {
+              data: encodeBase64Url(`
+                <p>Hi Shaik,</p>
+                <p>Thank you for taking the time to submit your application for Software Engineer 2 (Job number: 200038920). We're glad you're interested in a career at Microsoft.</p>
+              `)
+            }
+          }
+        }
+      ]
+    }
   ];
 }

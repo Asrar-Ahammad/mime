@@ -31,9 +31,19 @@ export default async function EmailsPage({ searchParams }: PageProps) {
       id: true,
       company: true,
       jobTitle: true,
+      createdAt: true,
+      appliedAt: true,
     },
     orderBy: { company: "asc" },
   });
+
+  const formattedApplications = applications.map((app) => ({
+    id: app.id,
+    company: app.company,
+    jobTitle: app.jobTitle,
+    createdAt: app.createdAt.toISOString(),
+    appliedAt: app.appliedAt ? app.appliedAt.toISOString() : null,
+  }));
 
   // Fetch synced email threads scoped to current user
   const emailThreads = await db.emailThread.findMany({
@@ -69,7 +79,7 @@ export default async function EmailsPage({ searchParams }: PageProps) {
     <Suspense fallback={<div className="p-8 text-center text-sm text-muted-foreground animate-pulse">Loading emails...</div>}>
       <EmailsClient
         initialEmails={formattedEmails}
-        applications={applications}
+        applications={formattedApplications}
         syncAction={syncEmailsAction}
         linkAction={linkEmailAction}
         deleteAction={deleteEmailAction}

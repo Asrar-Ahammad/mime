@@ -109,7 +109,7 @@ export function SettingsClient({ initialConfig, saveAction }: SettingsClientProp
       {/* Header Section */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-border/30 pb-6 pt-4">
         <div className="space-y-1.5">
-          <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight flex items-center gap-3 text-foreground">
+          <h1 className="text-2xl sm:text-3xl md:text-4xl font-extrabold tracking-tight flex items-center gap-3 text-foreground">
             <div className="p-2.5 rounded-xl bg-primary/10 border border-primary/20 shadow-inner">
               <Settings className="h-7 w-7 text-primary" />
             </div>

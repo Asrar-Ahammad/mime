@@ -62,6 +62,8 @@ interface MiniApplication {
   id: string;
   company: string;
   jobTitle: string;
+  createdAt: string;
+  appliedAt: string | null;
 }
 
 interface EmailsClientProps {
@@ -299,7 +301,7 @@ export function EmailsClient({
       {/* Header */}
       <div className="flex items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-foreground">Email Updates</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground">Email Updates</h1>
           <p className="text-sm text-muted-foreground hidden sm:block">
             Monitor and link job application update emails synced from your Gmail inbox.
           </p>
@@ -526,11 +528,15 @@ export function EmailsClient({
             
             {/* Pagination Controls */}
             {filteredAndSortedEmails.length > 0 && (
-              <div className="flex items-center justify-between border-t border-border/50 px-6 py-3 bg-accent/5">
-                <div className="text-xs text-muted-foreground">
-                  Showing <span className="font-medium text-foreground">{((currentPage - 1) * itemsPerPage) + 1}</span> to <span className="font-medium text-foreground">{Math.min(currentPage * itemsPerPage, filteredAndSortedEmails.length)}</span> of <span className="font-medium text-foreground">{filteredAndSortedEmails.length}</span> entries
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-border/50 px-6 py-3 bg-accent/5">
+                <div className="text-xs text-muted-foreground text-center sm:text-left">
+                  {filteredAndSortedEmails.length <= itemsPerPage && currentPage === 1 ? (
+                    <>Showing <span className="font-medium text-foreground">{filteredAndSortedEmails.length}</span> email{filteredAndSortedEmails.length !== 1 ? 's' : ''}</>
+                  ) : (
+                    <>Showing <span className="font-medium text-foreground">{((currentPage - 1) * itemsPerPage) + 1}</span> - <span className="font-medium text-foreground">{Math.min(currentPage * itemsPerPage, filteredAndSortedEmails.length)}</span> of <span className="font-medium text-foreground">{filteredAndSortedEmails.length}</span> emails</>
+                  )}
                 </div>
-                <div className="flex gap-2">
+                <div className="flex flex-wrap items-center justify-center gap-2">
                   <Button 
                     variant="outline" 
                     size="sm" 
@@ -542,24 +548,23 @@ export function EmailsClient({
                   </Button>
                   <div className="flex items-center gap-1">
                     {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                      // Logic for showing 5 pages at a time centered around current page
-                      let pageNum = i + 1;
-                      if (totalPages > 5) {
-                        if (currentPage <= 3) {
-                          pageNum = i + 1;
-                        } else if (currentPage >= totalPages - 2) {
-                          pageNum = totalPages - 4 + i;
-                        } else {
-                          pageNum = currentPage - 2 + i;
-                        }
-                      }
+                      const desktopStartPage = Math.max(1, Math.min(currentPage - 2, totalPages - 4));
+                      const pageNum = desktopStartPage + i;
+                      
+                      const mobileStartPage = Math.max(1, Math.min(currentPage - 1, totalPages - 2));
+                      const isMobileVisible = pageNum >= mobileStartPage && pageNum <= mobileStartPage + 2;
+
                       return (
                         <Button
                           key={pageNum}
                           variant={currentPage === pageNum ? "default" : "outline"}
                           size="sm"
                           onClick={() => setCurrentPage(pageNum)}
-                          className={cn("h-8 w-8 p-0 text-xs", currentPage === pageNum ? "pointer-events-none" : "")}
+                          className={cn(
+                            "h-8 w-8 p-0 text-xs", 
+                            currentPage === pageNum && "pointer-events-none",
+                            !isMobileVisible && "hidden sm:inline-flex"
+                          )}
                         >
                           {pageNum}
                         </Button>
@@ -852,8 +857,17 @@ export function EmailsClient({
                           : "border-border/30 hover:bg-accent/10 hover:border-border/60"
                       )}
                     >
-                      <div className="min-w-0">
-                        <p className="font-semibold text-foreground truncate">{app.company}</p>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center justify-between gap-2">
+                          <p className="font-semibold text-foreground truncate">{app.company}</p>
+                          <p className="text-[10px] text-muted-foreground whitespace-nowrap shrink-0">
+                            {new Date(app.appliedAt || app.createdAt).toLocaleDateString("en-US", {
+                              month: "short",
+                              day: "numeric",
+                              year: "numeric"
+                            })}
+                          </p>
+                        </div>
                         <p className="text-muted-foreground mt-0.5 truncate">{app.jobTitle}</p>
                       </div>
                       {isCurrentLink && (

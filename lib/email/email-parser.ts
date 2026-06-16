@@ -9,6 +9,29 @@ export interface ExtractedAppDetails {
   jobTitle: string | null;
   status: ApplicationStatus | null;
   isRecommendationOrAlert: boolean;
+  jobId: string | null;
+}
+
+export function extractJobId(text: string): string | null {
+  if (!text) return null;
+  const match = text.match(/\b(?:job\s*(?:id|number|no\.?|req\b)|requisition\b|req\b\s*(?:id|no\.?)?)\s*[:#-]?\s*([a-zA-Z0-9_-]+)/i);
+  return match ? match[1] : null;
+}
+
+export function cleanJobId(id: string | null): string | null {
+  if (!id) return null;
+  const cleaned = id.trim().toLowerCase();
+  if (
+    cleaned === "" ||
+    cleaned === "null" ||
+    cleaned === "none" ||
+    cleaned === "na" ||
+    cleaned === "n/a" ||
+    cleaned === "undefined"
+  ) {
+    return null;
+  }
+  return id.trim();
 }
 
 export async function extractApplicationDetailsFromEmail(
@@ -17,7 +40,7 @@ export async function extractApplicationDetailsFromEmail(
   snippet: string,
   body: string
 ): Promise<ExtractedAppDetails> {
-  const fallback = getHeuristicDetails(subject, sender, snippet);
+  const fallback = getHeuristicDetails(subject, sender, snippet, body);
 
   if (!process.env.OPENAI_API_KEY) {
     return fallback;
@@ -48,6 +71,7 @@ Respond with a JSON object containing:
 - jobTitle: string or null (the job title, e.g. "Software Engineer")
 - status: string or null (one of the Allowed status values above, or null if it is just a recommendation/alert or not an active application)
 - isRecommendationOrAlert: boolean (true if the email is a recommendation/alert/newsletter/suggestion, false if it is a direct interaction/confirmation for a submitted application)
+- jobId: string or null (any specific job ID, job number, requisition ID, or reference number associated with the application, e.g. "200038919", "REQ-123", or null if not found)
 
 Do not include any markdown formatting or code blocks in the output.
 `;
@@ -74,12 +98,21 @@ Do not include any markdown formatting or code blocks in the output.
     }
 
     const result = JSON.parse(content) as ExtractedAppDetails;
+    
+    // Safety override: if the AI explicitly detected a valid status (like APPLIED),
+    // it is definitely an active application and NOT just a generic alert.
+    let finalIsRec = typeof result.isRecommendationOrAlert === "boolean" ? result.isRecommendationOrAlert : fallback.isRecommendationOrAlert;
+    if (result.status && result.status !== "QUEUED") {
+      finalIsRec = false;
+    }
+
     return {
       isJobRelated: !!result.isJobRelated,
       companyName: result.companyName || fallback.companyName,
       jobTitle: result.jobTitle || fallback.jobTitle,
       status: result.status || fallback.status,
-      isRecommendationOrAlert: typeof result.isRecommendationOrAlert === "boolean" ? result.isRecommendationOrAlert : fallback.isRecommendationOrAlert,
+      isRecommendationOrAlert: finalIsRec,
+      jobId: cleanJobId(result.jobId || fallback.jobId),
     };
   } catch (error) {
     console.error("AI application extraction failed:", error);
@@ -130,7 +163,8 @@ function getCleanEmailBody(messages: any[]): string {
 function getHeuristicDetails(
   subject: string,
   sender: string,
-  snippet: string
+  snippet: string,
+  body?: string
 ): ExtractedAppDetails {
   const sub = subject.toLowerCase();
   const snd = sender.toLowerCase();
@@ -138,7 +172,7 @@ function getHeuristicDetails(
 
   const isJobRelated = isJobRelatedHeuristic(subject, sender, snippet);
   if (!isJobRelated) {
-    return { isJobRelated: false, companyName: null, jobTitle: null, status: null, isRecommendationOrAlert: false };
+    return { isJobRelated: false, companyName: null, jobTitle: null, status: null, isRecommendationOrAlert: false, jobId: null };
   }
 
   // Determine if it is a recommendation/alert
@@ -156,11 +190,41 @@ function getHeuristicDetails(
 
   // Basic heuristic company extraction
   let companyName: string | null = null;
-  const companies = ["google", "stripe", "razorpay", "wellfound", "indeed", "linkedin", "tcs", "honeywell", "amazon", "supabase", "apna", "leetcode", "philips", "deloitte", "barclays", "genpact"];
+  const companies = ["google", "stripe", "razorpay", "wellfound", "indeed", "linkedin", "tcs", "honeywell", "amazon", "supabase", "apna", "leetcode", "philips", "deloitte", "barclays", "genpact", "microsoft"];
   for (const c of companies) {
     if (sub.includes(c) || snd.includes(c) || snip.includes(c)) {
       companyName = c.charAt(0).toUpperCase() + c.slice(1);
       break;
+    }
+  }
+
+  // Fallback domain-based or display-name-based company extraction
+  if (!companyName) {
+    const emailMatch = sender.match(/@([a-zA-Z0-9.-]+)/);
+    if (emailMatch) {
+      const domain = emailMatch[1].toLowerCase();
+      const parts = domain.split('.');
+      if (parts.length >= 2) {
+        const commonProviders = ["gmail", "outlook", "yahoo", "hotmail", "protonmail", "icloud", "mail", "sendgrid", "amazonses", "secureserver"];
+        const domainParts = parts.filter(p => !commonProviders.includes(p) && p !== "com" && p !== "org" && p !== "net" && p !== "co" && p !== "in" && p !== "club" && p !== "ai" && p !== "io" && p !== "gov" && p !== "edu");
+        if (domainParts.length > 0) {
+          const candidate = domainParts[domainParts.length - 1];
+          companyName = candidate.charAt(0).toUpperCase() + candidate.slice(1);
+        }
+      }
+    }
+  }
+
+  if (!companyName) {
+    const displayMatch = sender.match(/^([^<]+)/);
+    if (displayMatch) {
+      const displayName = displayMatch[1].trim();
+      if (displayName && !displayName.includes("@")) {
+        const cleanName = displayName.replace(/\b(careers|recruiting|team|hr|jobs|noreply|no-reply|notifications|alerts)\b/gi, "").trim();
+        if (cleanName) {
+          companyName = cleanName;
+        }
+      }
     }
   }
 
@@ -204,9 +268,21 @@ function getHeuristicDetails(
     textToParse.includes("declined")
   ) {
     status = "REJECTED";
-  } else if (appliedKeywords.some(kw => textToParse.includes(kw))) {
+  } else if (
+    appliedKeywords.some(kw => textToParse.includes(kw)) ||
+    textToParse.includes("apply") ||
+    textToParse.includes("applied") ||
+    textToParse.includes("application") ||
+    textToParse.includes("submission")
+  ) {
     status = "APPLIED";
+  } else {
+    if (!isRecommendationOrAlert) {
+      status = "APPLIED";
+    }
   }
+
+  const jobId = extractJobId(`${subject} ${snippet} ${body || ""}`);
 
   return {
     isJobRelated: true,
@@ -214,6 +290,7 @@ function getHeuristicDetails(
     jobTitle,
     status,
     isRecommendationOrAlert,
+    jobId: cleanJobId(jobId),
   };
 }
 
@@ -269,16 +346,6 @@ export async function syncUserEmails(userId: string) {
     let syncCount = 0;
 
     for (const thread of threads) {
-      // Decode the full text body of the last message in this thread
-      const body = getCleanEmailBody(thread.rawMessages as any[]);
-
-      // Look at the email and extract application details with full body context
-      const details = await extractApplicationDetailsFromEmail(thread.subject, thread.sender, thread.snippet, body);
-      if (!details.isJobRelated) {
-        console.log(`[Sync] Skipping non-job email thread: "${thread.subject}"`);
-        continue;
-      }
-
       // Check if thread already imported
       const existingThread = await db.emailThread.findUnique({
         where: {
@@ -288,6 +355,25 @@ export async function syncUserEmails(userId: string) {
           },
         },
       });
+
+      const isNewOrUpdated = !existingThread || 
+        new Date(existingThread.lastMessageDate).getTime() < new Date(thread.lastMessageDate).getTime();
+
+      // Optimize: If it's not new, not updated, and already linked to an application,
+      // we do not need to process it through OpenAI again.
+      if (!isNewOrUpdated && existingThread?.applicationId) {
+        continue;
+      }
+
+      // Decode the full text body of the last message in this thread
+      const body = getCleanEmailBody(thread.rawMessages as any[]);
+
+      // Look at the email and extract application details with full body context
+      const details = await extractApplicationDetailsFromEmail(thread.subject, thread.sender, thread.snippet, body);
+      if (!details.isJobRelated) {
+        console.log(`[Sync] Skipping non-job email thread: "${thread.subject}"`);
+        continue;
+      }
 
       let linkedApplicationId: string | null = null;
       let detectedStatus: ApplicationStatus | null = details.status;
@@ -300,54 +386,102 @@ export async function syncUserEmails(userId: string) {
         const emailSender = thread.sender.toLowerCase();
         const emailSnippet = thread.snippet.toLowerCase();
 
-        return (
+        const isCompanyMatch = 
           (extractedCompany && (companyName.includes(extractedCompany) || extractedCompany.includes(companyName))) ||
           emailSubject.includes(companyName) ||
           emailSender.includes(companyName) ||
-          emailSnippet.includes(companyName)
-        );
+          emailSnippet.includes(companyName);
+
+        if (!isCompanyMatch) return false;
+
+        // If both have jobId, they must match exactly
+        if (details.jobId && app.jobId) {
+          return app.jobId === details.jobId;
+        }
+
+        // If one has a jobId and the other doesn't, they are different applications
+        if ((details.jobId && !app.jobId) || (!details.jobId && app.jobId)) {
+          return false;
+        }
+
+        // Neither has jobId: check the time difference between application and email
+        const appDate = app.appliedAt || app.createdAt;
+        const emailDate = thread.lastMessageDate;
+        const timeDiffMs = Math.abs(new Date(emailDate).getTime() - new Date(appDate).getTime());
+        const oneDayMs = 24 * 60 * 60 * 1000;
+
+        // If the email date is more than 24 hours apart from the application date, they are different applications
+        if (timeDiffMs > oneDayMs) {
+          return false;
+        }
+
+        // Check if job titles are completely different (safeguard)
+        if (details.jobTitle && app.jobTitle) {
+          const t1 = details.jobTitle.toLowerCase();
+          const t2 = app.jobTitle.toLowerCase();
+          if ((t1.includes("frontend") && t2.includes("backend")) || (t1.includes("backend") && t2.includes("frontend"))) {
+            return false;
+          }
+        }
+
+        return true;
       });
 
+      console.log(`[Sync Debug] Extracted details for thread ${thread.subject}:`, JSON.stringify(details));
       if (matchingApp) {
+        console.log(`[Sync Debug] Found matching app ${matchingApp.id} for thread ${thread.subject}`);
         linkedApplicationId = matchingApp.id;
-      } else if (details.companyName && details.status && !details.isRecommendationOrAlert) {
-        // Automatically create a new application for this company only if we detected status AND it is NOT a recommendation or alert!
-        console.log(`[Sync] Creating new application for company: "${details.companyName}"`);
-        try {
-          const newApp = await db.application.create({
-            data: {
-              userId,
-              company: details.companyName,
-              jobTitle: details.jobTitle || "Software Engineer",
-              jobUrl: "discovered-from-email",
-              jobDescription: thread.snippet,
-              platform: "direct",
-              status: details.status || "APPLIED",
-            },
-          });
-          linkedApplicationId = newApp.id;
-          
-          // Add this new application to our local array so future threads for the same company can link to it
-          applications.push(newApp);
+        if (details.jobId && !matchingApp.jobId) {
+          try {
+            await db.application.update({
+              where: { id: matchingApp.id },
+              data: { jobId: details.jobId },
+            });
+            matchingApp.jobId = details.jobId;
+          } catch (err) {
+            console.error(`[Sync] Failed to update jobId for app ${matchingApp.id}:`, err);
+          }
+        }
+      } else {
+        console.log(`[Sync Debug] No matching app found for thread ${thread.subject}. Conditions for creation: companyName=${!!details.companyName}, status=${!!details.status}, isRecommendationOrAlert=${details.isRecommendationOrAlert}`);
+        if (details.companyName && details.status && !details.isRecommendationOrAlert) {
+          // Automatically create a new application for this company only if we detected status AND it is NOT a recommendation or alert!
+          console.log(`[Sync] Creating new application for company: "${details.companyName}" with jobId: "${details.jobId}"`);
+          try {
+            const newApp = await db.application.create({
+              data: {
+                userId,
+                company: details.companyName,
+                jobTitle: details.jobTitle || "Software Engineer",
+                jobUrl: "discovered-from-email",
+                jobDescription: thread.snippet,
+                platform: "direct",
+                status: details.status || "APPLIED",
+                jobId: details.jobId,
+                appliedAt: thread.lastMessageDate,
+              },
+            });
+            linkedApplicationId = newApp.id;
+            
+            // Add this new application to our local array so future threads for the same company can link to it
+            applications.push(newApp);
 
-          // Create notification for auto-creation
-          await db.notification.create({
-            data: {
-              userId,
-              applicationId: newApp.id,
-              title: "New Application Discovered",
-              message: `Automatically created application for ${details.companyName} as ${details.jobTitle || "Software Engineer"}`,
-            },
-          });
-        } catch (err) {
-          console.error(`[Sync] Failed to automatically create application for ${details.companyName}:`, err);
+            // Create notification for auto-creation
+            await db.notification.create({
+              data: {
+                userId,
+                applicationId: newApp.id,
+                title: "New Application Discovered",
+                message: `Automatically created application for ${details.companyName} as ${details.jobTitle || "Software Engineer"}`,
+              },
+            });
+          } catch (err) {
+            console.error(`[Sync] Failed to automatically create application for ${details.companyName}:`, err);
+          }
         }
       }
 
       // If we found a linked application and a detected status, update the application
-      const isNewOrUpdated = !existingThread || 
-        new Date(existingThread.lastMessageDate).getTime() < new Date(thread.lastMessageDate).getTime();
-
       // Update status only if it represents progress AND the email is NOT a recommendation or alert
       if (isNewOrUpdated && linkedApplicationId && detectedStatus && !details.isRecommendationOrAlert) {
         // Only update if it represents progress (e.g., don't downgrade INTERVIEWING to APPLIED)

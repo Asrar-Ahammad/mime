@@ -37,7 +37,7 @@ import {
   DialogFooter,
   DialogClose,
 } from "@/components/ui/dialog";
-
+import Link from "next/link";
 
 interface Resume {
   id: string;
@@ -234,17 +234,25 @@ export function ResumesClient({
       {/* Header */}
       <div className="flex items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-foreground">Resumes</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground">Resumes</h1>
           <p className="text-sm text-muted-foreground hidden sm:block">
             Upload your master resume and generate tailored variants optimized for specific job roles.
           </p>
         </div>
-        {selectedResume && (
-          <Button onClick={() => setTailorOpen(true)} className="gap-1.5 sm:gap-2 shrink-0">
-            <Sparkle size={16} weight="fill" />
-            <span>Tailor Resume</span>
-          </Button>
-        )}
+        <div className="flex items-center gap-2">
+          {selectedResume && (
+            <Button onClick={() => setTailorOpen(true)} variant="outline" className="gap-1.5 sm:gap-2 shrink-0 bg-card border-border/40">
+              <Sparkle size={16} weight="fill" />
+              <span>Tailor Resume</span>
+            </Button>
+          )}
+          {/* <Button asChild className="gap-1.5 sm:gap-2 shrink-0">
+            <Link href="/resumes/editor" className="flex items-center justify-center gap-1">
+              <Plus size={16} weight="bold" />
+              <span>Create Resume</span>
+            </Link>
+          </Button> */}
+        </div>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-3 w-full min-w-0">

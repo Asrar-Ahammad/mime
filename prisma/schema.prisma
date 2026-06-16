@@ -110,6 +110,7 @@ model Application {
   fitScore       Float? // 0–100 AI match score
   appliedAt      DateTime?
   notes          String?           @db.Text
+  jobId          String?
 
   emailThreads EmailThread[]
   notifications Notification[]

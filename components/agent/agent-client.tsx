@@ -167,7 +167,7 @@ export function AgentClient({
       {/* Header */}
       <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-foreground">AI Agent</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground">AI Agent</h1>
           <p className="text-sm text-muted-foreground hidden sm:block">
             Control the scraper bot, view terminal execution logs, and monitor target matches.
           </p>

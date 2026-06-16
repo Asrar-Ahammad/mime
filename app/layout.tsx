@@ -4,6 +4,7 @@ import { ThemeProvider } from "@/components/providers/theme-provider";
 import { PwaProvider } from "@/components/providers/pwa-provider";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "@/components/ui/sonner";
+import Script from "next/script";
 import "./globals.css";
 
 const inter = Inter({
@@ -37,17 +38,6 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning className={`${inter.variable} h-full`}>
       <head>
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `
-              window.__deferredPrompt = null;
-              window.addEventListener('beforeinstallprompt', (e) => {
-                e.preventDefault();
-                window.__deferredPrompt = e;
-              });
-            `,
-          }}
-        />
       </head>
       <body suppressHydrationWarning className="min-h-full bg-background text-foreground antialiased">
         <ThemeProvider

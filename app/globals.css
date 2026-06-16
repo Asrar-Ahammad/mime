@@ -229,3 +229,31 @@
 .stagger-children > *:nth-child(4) { animation-delay: 150ms; }
 .stagger-children > *:nth-child(5) { animation-delay: 200ms; }
 .stagger-children > *:nth-child(6) { animation-delay: 250ms; }
+/* Resume Content Link Icon Style */
+.resume-content a::after,
+article a::after {
+  content: "";
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  margin-left: 3px;
+  vertical-align: middle;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 256 256' fill='%234b5563'%3E%3Cpath d='M137.54,186.36a8,8,0,0,1,0,11.31l-22.63,22.63a56,56,0,0,1-79.2-79.2l22.63-22.63a8,8,0,0,1,11.31,11.31L47,152.41a40,40,0,0,0,56.57,56.57l22.63-22.63A8,8,0,0,1,137.54,186.36Zm84.85-117.38-22.63-22.63a56,56,0,0,0-79.2,0L97.93,69a8,8,0,0,0,11.31,11.31l22.63-22.63a40,40,0,0,1,56.57,56.57l-22.63,22.63a8,8,0,0,0,11.31,11.31l22.63-22.63A56,56,0,0,0,222.39,69ZM161.49,105.8a8,8,0,0,0-11.31-1.13L93.61,146.19a8,8,0,0,0,10.18,12.44l56.57-41.52A8,8,0,0,0,161.49,105.8Z'%3E%3C/path%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-size: contain;
+  opacity: 0.8;
+}
+
+/* Accordion Panel Smooth Transition */
+.accordion-panel {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 250ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+.accordion-panel-expanded {
+  grid-template-rows: 1fr;
+}
+.accordion-inner {
+  overflow: hidden;
+  min-height: 0;
+}

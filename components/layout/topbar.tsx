@@ -135,23 +135,7 @@ export function Topbar({ user }: TopbarProps) {
   return (
     <header className="flex h-16 w-full items-center justify-between border-b border-border bg-background/50 px-6 backdrop-blur-md">
       <div className="flex items-center gap-3 flex-1 max-w-md">
-        {/* Mobile Sidebar Trigger */}
-        <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
-          <SheetTrigger
-            render={
-              <Button
-                variant="ghost"
-                size="icon"
-                className="flex md:hidden shrink-0 text-muted-foreground hover:bg-accent hover:text-foreground"
-              >
-                <List size={22} />
-              </Button>
-            }
-          />
-          <SheetContent side="left" className="p-0 w-[240px]">
-            <Sidebar className="flex h-full w-[240px]" isMobile />
-          </SheetContent>
-        </Sheet>
+
 
         {/* Search Bar Trigger */}
         <div 

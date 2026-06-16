@@ -3,11 +3,17 @@ import { db } from "@/lib/db";
 import { redirect } from "next/navigation";
 import { ArrowLeft, Printer } from "@phosphor-icons/react/dist/ssr";
 import Link from "next/link";
+import Script from "next/script";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 interface PageProps {
   params: Promise<{ id: string }>;
+}
+
+function renderFormattedText(text: string) {
+  if (!text) return "";
+  return <span dangerouslySetInnerHTML={{ __html: text }} />;
 }
 
 export default async function ExportResumePage({ params }: PageProps) {
@@ -35,6 +41,16 @@ export default async function ExportResumePage({ params }: PageProps) {
 
   return (
     <div className="min-h-screen bg-neutral-900 print:bg-white text-zinc-100 print:text-black py-8 print:py-0 px-4">
+      <style dangerouslySetInnerHTML={{ __html: `
+        @media print {
+          @page {
+            margin: 0;
+          }
+          body {
+            margin: 0;
+          }
+        }
+      `}} />
       {/* Control bar (hidden when printing) */}
       <div className="max-w-4xl mx-auto mb-6 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 print:hidden bg-neutral-800/80 p-4 rounded-xl border border-neutral-700/50 backdrop-blur-md w-full">
         <div className="flex items-center gap-2 w-full min-w-0">
@@ -59,12 +75,19 @@ export default async function ExportResumePage({ params }: PageProps) {
           Print / Save to PDF
         </Button>
         {/* We inject inline onClick script for printing to work without making this page a client component */}
-        <script
+        <Script
+          id="print-script"
+          strategy="lazyOnload"
           dangerouslySetInnerHTML={{
             __html: `
               document.querySelector('button').addEventListener('click', () => {
                 window.print();
               });
+              if (window.location.search.includes('download=true')) {
+                setTimeout(() => {
+                  window.print();
+                }, 400);
+              }
             `,
           }}
         />
@@ -106,14 +129,28 @@ export default async function ExportResumePage({ params }: PageProps) {
         </header>
 
         {/* Summary */}
-        {parsed.summary && (
+        {(parsed.summary || (parsed.profileEntries && parsed.profileEntries.filter((e: any) => e.isVisible).length > 0)) && (
           <section className="mb-5">
             <h2 className="text-xs font-bold uppercase tracking-wider text-zinc-800 font-sans mb-1.5 border-b border-zinc-200 pb-0.5">
-              Professional Summary
+              {parsed.profileHeading || "Professional Summary"}
             </h2>
-            <p className="text-xs leading-relaxed text-zinc-700 text-justify">
-              {parsed.summary}
-            </p>
+            <div className="space-y-2">
+              {parsed.profileEntries && parsed.profileEntries.filter((e: any) => e.isVisible).length > 0 ? (
+                parsed.profileEntries.filter((e: any) => e.isVisible).map((entry: any, index: number) => (
+                  <p 
+                    key={index} 
+                    style={{ textAlign: (entry.align || "left") as any }} 
+                    className="text-xs leading-relaxed text-zinc-700 text-justify"
+                  >
+                    {renderFormattedText(entry.text)}
+                  </p>
+                ))
+              ) : (
+                <p className="text-xs leading-relaxed text-zinc-700 text-justify">
+                  {renderFormattedText(parsed.summary)}
+                </p>
+              )}
+            </div>
           </section>
         )}
 
@@ -149,6 +186,12 @@ export default async function ExportResumePage({ params }: PageProps) {
                     <span>{exp.company}</span>
                     {exp.location && <span>{exp.location}</span>}
                   </div>
+                  {exp.description && (
+                    <div 
+                      className="text-xs leading-relaxed text-zinc-700 text-justify mt-1"
+                      dangerouslySetInnerHTML={{ __html: exp.description }}
+                    />
+                  )}
                   {exp.bullets && exp.bullets.length > 0 && (
                     <ul className="list-disc pl-4 space-y-1">
                       {exp.bullets.map((bullet: string, bidx: number) => (
