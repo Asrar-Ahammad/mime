@@ -14,6 +14,7 @@ export async function saveSettings(data: {
   isActive: boolean;
   syncHour: number;
   syncMinute: number;
+  autoDeleteUnlinkedEmails: boolean;
 }) {
   const session = await auth();
   if (!session?.user) {
@@ -40,6 +41,7 @@ export async function saveSettings(data: {
       isActive: data.isActive,
       syncHour: data.syncHour,
       syncMinute: data.syncMinute,
+      autoDeleteUnlinkedEmails: data.autoDeleteUnlinkedEmails,
     };
 
     if (existingConfig) {

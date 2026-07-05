@@ -5,7 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Settings, Save, Plus, X, Sparkles, Clock, Target, MapPin, Briefcase } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Settings, Save, Plus, X, Sparkles, Clock, Target, MapPin, Briefcase, Mail } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { PwaInstallPrompt } from "./pwa-install-prompt";
@@ -21,6 +22,7 @@ interface AgentConfigData {
   isActive: boolean;
   syncHour: number;
   syncMinute: number;
+  autoDeleteUnlinkedEmails: boolean;
 }
 
 interface SettingsClientProps {
@@ -40,11 +42,13 @@ export function SettingsClient({ initialConfig, saveAction }: SettingsClientProp
       isActive: false,
       syncHour: 6,
       syncMinute: 0,
+      autoDeleteUnlinkedEmails: true,
     };
     return {
       ...base,
       syncHour: base.syncHour ?? 6,
       syncMinute: base.syncMinute ?? 0,
+      autoDeleteUnlinkedEmails: base.autoDeleteUnlinkedEmails ?? true,
     };
   });
 
@@ -253,6 +257,29 @@ export function SettingsClient({ initialConfig, saveAction }: SettingsClientProp
                 <p className="text-sm text-muted-foreground leading-relaxed">
                   Inbox sync runs automatically once per day at midnight UTC to check for status updates.
                 </p>
+              </div>
+
+              <div className="space-y-3 rounded-xl border border-border/30 bg-background/30 p-4 shadow-sm">
+                <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
+                  <Mail size={16} className="text-muted-foreground" />
+                  Auto-delete Unlinked Emails
+                </div>
+                <p className="text-sm text-muted-foreground leading-relaxed mb-3">
+                  Automatically delete emails from the database if they are not linked to any application after 24 hours.
+                </p>
+                <div className="flex items-center space-x-2">
+                  <Checkbox 
+                    id="autoDelete" 
+                    checked={config.autoDeleteUnlinkedEmails} 
+                    onCheckedChange={(checked) => setConfig((prev) => ({ ...prev, autoDeleteUnlinkedEmails: checked === true }))}
+                  />
+                  <label 
+                    htmlFor="autoDelete" 
+                    className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                  >
+                    Enable auto-deletion
+                  </label>
+                </div>
               </div>
               
               <div className="rounded-xl bg-gradient-to-br from-primary/10 to-primary/5 border border-primary/20 p-4 space-y-3 relative overflow-hidden">

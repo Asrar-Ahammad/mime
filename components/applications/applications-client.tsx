@@ -18,6 +18,8 @@ import {
   FileText,
   Plus,
 } from "@phosphor-icons/react";
+import { Sparkles, RefreshCw, FileText as LucideFileText, Kanban, Table } from "lucide-react";
+import { KanbanBoard } from "./kanban-board";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -66,6 +68,7 @@ interface DetailedApplication {
   status: ApplicationStatus;
   fitScore: number | null;
   notes: string | null;
+  coverLetter?: string | null;
   appliedAt: string | null;
   createdAt: string;
   resume?: {
@@ -84,7 +87,7 @@ interface DetailedApplication {
 
 interface ApplicationsClientProps {
   initialApplications: DetailedApplication[];
-  updateAction: (id: string, data: { status?: ApplicationStatus; notes?: string }) => Promise<{ success: boolean; error?: string }>;
+  updateAction: (id: string, data: { status?: ApplicationStatus; notes?: string; coverLetter?: string }) => Promise<{ success: boolean; error?: string }>;
   deleteAction: (id: string) => Promise<{ success: boolean; error?: string }>;
   bulkDeleteAction: (ids: string[]) => Promise<{ success: boolean; error?: string; count?: number }>;
   createAction: (data: {
@@ -96,6 +99,7 @@ interface ApplicationsClientProps {
     status: ApplicationStatus;
     notes?: string;
   }) => Promise<{ success: boolean; error?: string; application?: any }>;
+  generateCoverLetterAction: (applicationId: string) => Promise<{ success: boolean; error?: string; coverLetter?: string }>;
   initialAppId?: string;
 }
 
@@ -105,9 +109,18 @@ export function ApplicationsClient({
   deleteAction,
   bulkDeleteAction,
   createAction,
+  generateCoverLetterAction,
   initialAppId,
 }: ApplicationsClientProps) {
   const [applications, setApplications] = useState<DetailedApplication[]>(initialApplications);
+  const [viewMode, setViewMode] = useState<"table" | "kanban">("kanban");
+
+  useEffect(() => {
+    if (typeof window !== "undefined" && window.innerWidth < 768) {
+      setViewMode("table");
+    }
+  }, []);
+
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [platformFilter, setPlatformFilter] = useState<string>("all");
@@ -134,6 +147,10 @@ export function ApplicationsClient({
     notes: "",
   });
 
+  const [coverLetterEdit, setCoverLetterEdit] = useState("");
+  const [isEditingCoverLetter, setIsEditingCoverLetter] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
+
   const uniquePlatforms = useMemo(() => {
     const basePlatforms = ["direct", "linkedin", "naukri", "instahyre", "wellfound", "indeed"];
     const allPlatforms = new Set(basePlatforms);
@@ -159,6 +176,8 @@ export function ApplicationsClient({
         setSelectedApp(app);
         setNotesEdit(app.notes || "");
         setIsEditingNotes(false);
+        setCoverLetterEdit(app.coverLetter || "");
+        setIsEditingCoverLetter(false);
       }
     }
   }, [initialAppId, applications]);
@@ -247,6 +266,45 @@ export function ApplicationsClient({
         toast.success("Notes updated");
       } else {
         toast.error(result.error || "Failed to update notes");
+      }
+    });
+  };
+
+  const handleCoverLetterGenerate = async () => {
+    if (!selectedApp) return;
+    setIsGenerating(true);
+    try {
+      const result = await generateCoverLetterAction(selectedApp.id);
+      if (result.success && result.coverLetter) {
+        setApplications((prev) =>
+          prev.map((app) => (app.id === selectedApp.id ? { ...app, coverLetter: result.coverLetter } : app))
+        );
+        setSelectedApp((prev) => (prev ? { ...prev, coverLetter: result.coverLetter } : null));
+        setCoverLetterEdit(result.coverLetter);
+        toast.success("Cover letter generated!");
+      } else {
+        toast.error(result.error || "Failed to generate cover letter");
+      }
+    } catch (err) {
+      toast.error("An error occurred during generation");
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  const handleCoverLetterSave = async () => {
+    if (!selectedApp) return;
+    startTransition(async () => {
+      const result = await updateAction(selectedApp.id, { coverLetter: coverLetterEdit });
+      if (result.success) {
+        setApplications((prev) =>
+          prev.map((app) => (app.id === selectedApp.id ? { ...app, coverLetter: coverLetterEdit } : app))
+        );
+        setSelectedApp((prev) => (prev ? { ...prev, coverLetter: coverLetterEdit } : null));
+        setIsEditingCoverLetter(false);
+        toast.success("Cover letter updated");
+      } else {
+        toast.error(result.error || "Failed to update cover letter");
       }
     });
   };
@@ -477,6 +535,28 @@ export function ApplicationsClient({
             </SelectContent>
           </Select>
         </div>
+
+        {/* View Toggle */}
+        <div className="flex items-center gap-1 rounded-xl bg-accent/20 p-0.5 border border-border/40 shrink-0 w-fit self-end sm:self-auto h-9">
+          <Button
+            variant={viewMode === "kanban" ? "default" : "ghost"}
+            size="sm"
+            onClick={() => setViewMode("kanban")}
+            className="h-7 w-7 sm:w-auto sm:px-3 rounded-lg text-xs gap-1.5"
+          >
+            <Kanban size={14} />
+            <span className="hidden sm:inline">Kanban</span>
+          </Button>
+          <Button
+            variant={viewMode === "table" ? "default" : "ghost"}
+            size="sm"
+            onClick={() => setViewMode("table")}
+            className="h-7 w-7 sm:w-auto sm:px-3 rounded-lg text-xs gap-1.5"
+          >
+            <Table size={14} />
+            <span className="hidden sm:inline">Table</span>
+          </Button>
+        </div>
       </div>
 
       {/* Bulk Actions Toolbar */}
@@ -505,235 +585,259 @@ export function ApplicationsClient({
         </div>
       )}
 
-      {/* Main Table Card */}
-      <div className="rounded-xl border border-border bg-card shadow-lg overflow-hidden">
-        {filteredApps.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-20 text-sm text-muted-foreground">
+      {/* Main Content (Kanban or Table) */}
+      {viewMode === "kanban" ? (
+        filteredApps.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-20 text-sm text-muted-foreground border border-border rounded-xl bg-card shadow-lg">
             <Building size={48} className="text-muted-foreground/30 mb-4" />
             No applications match your search query.
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm text-left">
-              <thead>
-                <tr className="border-b border-border/50 text-xs font-semibold text-muted-foreground uppercase tracking-wider bg-accent/10">
-                  <th className="px-4 py-4 w-10" onClick={(e) => e.stopPropagation()}>
-                    <Checkbox
-                      checked={allFilteredSelected}
-                      indeterminate={someFilteredSelected && !allFilteredSelected}
-                      onCheckedChange={toggleSelectAll}
-                      aria-label="Select all applications"
-                    />
-                  </th>
-                  <th className="px-6 py-4">Company & Role</th>
-                  <th className="px-6 py-4">Platform</th>
-                  <th className="px-6 py-4">AI Score</th>
-                  <th className="px-6 py-4">Status</th>
-                  <th className="px-6 py-4">Date</th>
-                  <th className="px-6 py-4 text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border/20">
-                {paginatedApps.map((app) => (
-                  <tr
-                    key={app.id}
-                    className="group hover:bg-accent/10 cursor-pointer transition-smooth"
-                    onClick={() => {
-                      setSelectedApp(app);
-                      setNotesEdit(app.notes || "");
-                      setIsEditingNotes(false);
-                    }}
-                  >
-                    {/* Checkbox */}
-                    <td className="px-4 py-4 w-10" onClick={(e) => e.stopPropagation()}>
+          <KanbanBoard
+            applications={filteredApps}
+            onStatusChange={handleStatusChange}
+            onSelectApp={(app) => {
+              setSelectedApp(app);
+              setNotesEdit(app.notes || "");
+              setIsEditingNotes(false);
+              setCoverLetterEdit(app.coverLetter || "");
+              setIsEditingCoverLetter(false);
+            }}
+          />
+        )
+      ) : (
+        /* Main Table Card */
+        <div className="rounded-xl border border-border bg-card shadow-lg overflow-hidden">
+          {filteredApps.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-20 text-sm text-muted-foreground">
+              <Building size={48} className="text-muted-foreground/30 mb-4" />
+              No applications match your search query.
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm text-left">
+                <thead>
+                  <tr className="border-b border-border/50 text-xs font-semibold text-muted-foreground uppercase tracking-wider bg-accent/10">
+                    <th className="px-4 py-4 w-10" onClick={(e) => e.stopPropagation()}>
                       <Checkbox
-                        checked={selectedIds.has(app.id)}
-                        onCheckedChange={() => toggleSelectOne(app.id)}
-                        aria-label={`Select ${app.company}`}
+                        checked={allFilteredSelected}
+                        indeterminate={someFilteredSelected && !allFilteredSelected}
+                        onCheckedChange={toggleSelectAll}
+                        aria-label="Select all applications"
                       />
-                    </td>
+                    </th>
+                    <th className="px-6 py-4">Company & Role</th>
+                    <th className="px-6 py-4">Platform</th>
+                    <th className="px-6 py-4">AI Score</th>
+                    <th className="px-6 py-4">Status</th>
+                    <th className="px-6 py-4">Date</th>
+                    <th className="px-6 py-4 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border/20">
+                  {paginatedApps.map((app) => (
+                    <tr
+                      key={app.id}
+                      className="group hover:bg-accent/10 cursor-pointer transition-smooth"
+                      onClick={() => {
+                        setSelectedApp(app);
+                        setNotesEdit(app.notes || "");
+                        setIsEditingNotes(false);
+                        setCoverLetterEdit(app.coverLetter || "");
+                        setIsEditingCoverLetter(false);
+                      }}
+                    >
+                      {/* Checkbox */}
+                      <td className="px-4 py-4 w-10" onClick={(e) => e.stopPropagation()}>
+                        <Checkbox
+                          checked={selectedIds.has(app.id)}
+                          onCheckedChange={() => toggleSelectOne(app.id)}
+                          aria-label={`Select ${app.company}`}
+                        />
+                      </td>
 
-                    {/* Company and Role */}
-                    <td className="px-6 py-4">
-                      <div className="font-semibold text-foreground">{app.company}</div>
-                      <div className="text-xs text-muted-foreground mt-0.5">{app.jobTitle}</div>
-                    </td>
+                      {/* Company and Role */}
+                      <td className="px-6 py-4">
+                        <div className="font-semibold text-foreground">{app.company}</div>
+                        <div className="text-xs text-muted-foreground mt-0.5">{app.jobTitle}</div>
+                      </td>
 
-                    {/* Platform */}
-                    <td className="px-6 py-4">
-                      <span className="inline-flex items-center rounded bg-accent/60 px-2.5 py-0.5 text-xs font-medium text-muted-foreground capitalize border border-border/40">
-                        {app.platform}
-                      </span>
-                    </td>
+                      {/* Platform */}
+                      <td className="px-6 py-4">
+                        <span className="inline-flex items-center rounded bg-accent/60 px-2.5 py-0.5 text-xs font-medium text-muted-foreground capitalize border border-border/40">
+                          {app.platform}
+                        </span>
+                      </td>
 
-                    {/* AI Score */}
-                    <td className="px-6 py-4">
-                      {app.fitScore ? (
-                        <div className="flex items-center gap-1">
-                          <Sparkle
-                            size={12}
-                            weight="fill"
+                      {/* AI Score */}
+                      <td className="px-6 py-4">
+                        {app.fitScore ? (
+                          <div className="flex items-center gap-1">
+                            <Sparkle
+                              size={12}
+                              weight="fill"
+                              className={cn(
+                                app.fitScore >= 90
+                                  ? "text-status-offered"
+                                  : app.fitScore >= 80
+                                  ? "text-primary"
+                                  : "text-status-queued"
+                              )}
+                            />
+                            <span
+                              className={cn(
+                                "font-bold text-xs",
+                                app.fitScore >= 90
+                                  ? "text-status-offered"
+                                  : app.fitScore >= 80
+                                  ? "text-primary"
+                                  : "text-status-queued"
+                              )}
+                            >
+                              {app.fitScore}%
+                            </span>
+                          </div>
+                        ) : (
+                          <span className="text-muted-foreground text-xs">—</span>
+                        )}
+                      </td>
+
+                      {/* Status Select inside Table */}
+                      <td className="px-6 py-4" onClick={(e) => e.stopPropagation()}>
+                        <Select
+                          value={app.status}
+                          onValueChange={(val) => {
+                            if (val) handleStatusChange(app.id, val as ApplicationStatus);
+                          }}
+                        >
+                          <SelectTrigger
                             className={cn(
-                              app.fitScore >= 90
-                                ? "text-status-offered"
-                                : app.fitScore >= 80
-                                ? "text-primary"
-                                : "text-status-queued"
-                            )}
-                          />
-                          <span
-                            className={cn(
-                              "font-bold text-xs",
-                              app.fitScore >= 90
-                                ? "text-status-offered"
-                                : app.fitScore >= 80
-                                ? "text-primary"
-                                : "text-status-queued"
+                              "h-7 w-[130px] rounded-full border px-2.5 text-xs font-medium py-0 transition-smooth capitalize",
+                              statusColors[app.status]
                             )}
                           >
-                            {app.fitScore}%
-                          </span>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {availableStatuses.map((st) => (
+                              <SelectItem key={st} value={st} className="text-xs capitalize">
+                                {st.toLowerCase()}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </td>
+
+                      {/* Date (from email or appliedAt) */}
+                      <td className="px-6 py-4 text-xs text-muted-foreground">
+                        {(() => {
+                          let displayDate = app.appliedAt;
+                          if (app.emailThreads && app.emailThreads.length > 0) {
+                            const latestThread = [...app.emailThreads].sort(
+                              (a, b) => new Date(b.lastMessageDate).getTime() - new Date(a.lastMessageDate).getTime()
+                            )[0];
+                            displayDate = latestThread.lastMessageDate;
+                          }
+                          return displayDate
+                            ? new Date(displayDate).toLocaleDateString("en-US", {
+                                year: "numeric",
+                                month: "short",
+                                day: "numeric",
+                              })
+                            : "No date";
+                        })()}
+                      </td>
+
+                      {/* Actions Column */}
+                      <td className="px-6 py-4 text-right" onClick={(e) => e.stopPropagation()}>
+                        <div className="flex justify-end gap-1.5 transition-smooth">
+                          <a
+                            href={app.jobUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                            className={cn(
+                              buttonVariants({ variant: "ghost", size: "icon" }),
+                              "h-8 w-8 rounded-lg text-muted-foreground hover:text-foreground hover:bg-accent flex items-center justify-center"
+                            )}
+                          >
+                            <ArrowSquareOut size={16} />
+                          </a>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 rounded-lg text-destructive hover:text-destructive hover:bg-destructive/10"
+                            onClick={() => triggerDelete(app.id)}
+                          >
+                            <Trash size={16} />
+                          </Button>
                         </div>
-                      ) : (
-                        <span className="text-muted-foreground text-xs">—</span>
-                      )}
-                    </td>
-
-                    {/* Status Select inside Table */}
-                    <td className="px-6 py-4" onClick={(e) => e.stopPropagation()}>
-                      <Select
-                        value={app.status}
-                        onValueChange={(val) => {
-                          if (val) handleStatusChange(app.id, val as ApplicationStatus);
-                        }}
-                      >
-                        <SelectTrigger
-                          className={cn(
-                            "h-7 w-[130px] rounded-full border px-2.5 text-xs font-medium py-0 transition-smooth capitalize",
-                            statusColors[app.status]
-                          )}
-                        >
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {availableStatuses.map((st) => (
-                            <SelectItem key={st} value={st} className="text-xs capitalize">
-                              {st.toLowerCase()}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </td>
-
-                    {/* Date (from email or appliedAt) */}
-                    <td className="px-6 py-4 text-xs text-muted-foreground">
-                      {(() => {
-                        let displayDate = app.appliedAt;
-                        if (app.emailThreads && app.emailThreads.length > 0) {
-                          const latestThread = [...app.emailThreads].sort(
-                            (a, b) => new Date(b.lastMessageDate).getTime() - new Date(a.lastMessageDate).getTime()
-                          )[0];
-                          displayDate = latestThread.lastMessageDate;
-                        }
-                        return displayDate
-                          ? new Date(displayDate).toLocaleDateString("en-US", {
-                              year: "numeric",
-                              month: "short",
-                              day: "numeric",
-                            })
-                          : "No date";
-                      })()}
-                    </td>
-
-                    {/* Actions Column */}
-                    <td className="px-6 py-4 text-right" onClick={(e) => e.stopPropagation()}>
-                      <div className="flex justify-end gap-1.5 transition-smooth">
-                        <a
-                          href={app.jobUrl}
-                          target="_blank"
-                          rel="noreferrer"
-                          className={cn(
-                            buttonVariants({ variant: "ghost", size: "icon" }),
-                            "h-8 w-8 rounded-lg text-muted-foreground hover:text-foreground hover:bg-accent flex items-center justify-center"
-                          )}
-                        >
-                          <ArrowSquareOut size={16} />
-                        </a>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 rounded-lg text-destructive hover:text-destructive hover:bg-destructive/10"
-                          onClick={() => triggerDelete(app.id)}
-                        >
-                          <Trash size={16} />
-                        </Button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-        
-        {/* Pagination Controls */}
-        {filteredApps.length > 0 && (
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-border/50 px-6 py-3 bg-accent/5">
-            <div className="text-xs text-muted-foreground text-center sm:text-left">
-              {filteredApps.length <= itemsPerPage && currentPage === 1 ? (
-                <>Showing <span className="font-medium text-foreground">{filteredApps.length}</span> application{filteredApps.length !== 1 ? 's' : ''}</>
-              ) : (
-                <>Showing <span className="font-medium text-foreground">{((currentPage - 1) * itemsPerPage) + 1}</span> - <span className="font-medium text-foreground">{Math.min(currentPage * itemsPerPage, filteredApps.length)}</span> of <span className="font-medium text-foreground">{filteredApps.length}</span> applications</>
-              )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
-            <div className="flex flex-wrap items-center justify-center gap-2">
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={() => setCurrentPage(p => Math.max(1, p - 1))} 
-                disabled={currentPage === 1}
-                className="h-8 text-xs"
-              >
-                Previous
-              </Button>
-              <div className="flex items-center gap-1">
-                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                  const desktopStartPage = Math.max(1, Math.min(currentPage - 2, totalPages - 4));
-                  const pageNum = desktopStartPage + i;
-                  
-                  const mobileStartPage = Math.max(1, Math.min(currentPage - 1, totalPages - 2));
-                  const isMobileVisible = pageNum >= mobileStartPage && pageNum <= mobileStartPage + 2;
+          )}
 
-                  return (
-                    <Button
-                      key={pageNum}
-                      variant={currentPage === pageNum ? "default" : "outline"}
-                      size="sm"
-                      onClick={() => setCurrentPage(pageNum)}
-                      className={cn(
-                        "h-8 w-8 p-0 text-xs", 
-                        currentPage === pageNum && "pointer-events-none",
-                        !isMobileVisible && "hidden sm:inline-flex"
-                      )}
-                    >
-                      {pageNum}
-                    </Button>
-                  );
-                })}
+          {/* Pagination Controls */}
+          {filteredApps.length > 0 && (
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-border/50 px-6 py-3 bg-accent/5">
+              <div className="text-xs text-muted-foreground text-center sm:text-left">
+                {filteredApps.length <= itemsPerPage && currentPage === 1 ? (
+                  <>Showing <span className="font-medium text-foreground">{filteredApps.length}</span> application{filteredApps.length !== 1 ? 's' : ''}</>
+                ) : (
+                  <>Showing <span className="font-medium text-foreground">{((currentPage - 1) * itemsPerPage) + 1}</span> - <span className="font-medium text-foreground">{Math.min(currentPage * itemsPerPage, filteredApps.length)}</span> of <span className="font-medium text-foreground">{filteredApps.length}</span> applications</>
+                )}
               </div>
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} 
-                disabled={currentPage === totalPages}
-                className="h-8 text-xs"
-              >
-                Next
-              </Button>
+              <div className="flex flex-wrap items-center justify-center gap-2">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))} 
+                  disabled={currentPage === 1}
+                  className="h-8 text-xs"
+                >
+                  Previous
+                </Button>
+                <div className="flex items-center gap-1">
+                  {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                    const desktopStartPage = Math.max(1, Math.min(currentPage - 2, totalPages - 4));
+                    const pageNum = desktopStartPage + i;
+
+                    const mobileStartPage = Math.max(1, Math.min(currentPage - 1, totalPages - 2));
+                    const isMobileVisible = pageNum >= mobileStartPage && pageNum <= mobileStartPage + 2;
+
+                    return (
+                      <Button
+                        key={pageNum}
+                        variant={currentPage === pageNum ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => setCurrentPage(pageNum)}
+                        className={cn(
+                          "h-8 w-8 p-0 text-xs", 
+                          currentPage === pageNum && "pointer-events-none",
+                          !isMobileVisible && "hidden sm:inline-flex"
+                        )}
+                      >
+                        {pageNum}
+                      </Button>
+                    );
+                  })}
+                </div>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} 
+                  disabled={currentPage === totalPages}
+                  className="h-8 text-xs"
+                >
+                  Next
+                </Button>
+              </div>
             </div>
-          </div>
-        )}
-      </div>
+          )}
+        </div>
+      )}
 
       {/* Slide-over Detail Sheet */}
       <Sheet open={selectedApp !== null} onOpenChange={(open) => !open && setSelectedApp(null)}>
@@ -893,6 +997,7 @@ export function ApplicationsClient({
                   {selectedApp.jobDescription || "No job description available."}
                 </div>
               </div>
+
 
               {/* Email Threads */}
               <div className="space-y-3">

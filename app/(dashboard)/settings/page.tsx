@@ -33,6 +33,7 @@ export default async function SettingsPage() {
         isActive: existingConfig.isActive,
         syncHour: existingConfig.syncHour,
         syncMinute: existingConfig.syncMinute,
+        autoDeleteUnlinkedEmails: existingConfig.autoDeleteUnlinkedEmails,
       }
     : null;
 

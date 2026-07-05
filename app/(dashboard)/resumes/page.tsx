@@ -2,7 +2,7 @@ import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { redirect } from "next/navigation";
 import { ResumesClient } from "@/components/resumes/resumes-client";
-import { setMasterAction, deleteAction, tailorAction, updateNameAction } from "./actions";
+import { setMasterAction, deleteAction, tailorAction, updateNameAction, generateCoverLetterAction } from "./actions";
 
 export default async function ResumesPage() {
   const session = await auth();
@@ -38,6 +38,7 @@ export default async function ResumesPage() {
       deleteAction={deleteAction}
       tailorAction={tailorAction}
       updateNameAction={updateNameAction}
+      generateCoverLetterAction={generateCoverLetterAction}
     />
   );
 }

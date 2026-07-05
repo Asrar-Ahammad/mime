@@ -111,6 +111,7 @@ model Application {
   appliedAt      DateTime?
   notes          String?           @db.Text
   jobId          String?
+  coverLetter    String?           @db.Text
 
   emailThreads EmailThread[]
   notifications Notification[]
@@ -161,6 +162,7 @@ model AgentConfig {
   isActive        Boolean  @default(false)
   syncHour        Int      @default(6)  // 0-23 hour for daily Gmail sync
   syncMinute      Int      @default(0)  // 0-59 minute for daily Gmail sync
+  autoDeleteUnlinkedEmails Boolean @default(true)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
