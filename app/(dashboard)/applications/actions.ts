@@ -4,10 +4,11 @@ import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { ApplicationStatus } from "@prisma/client";
 import { revalidatePath } from "next/cache";
+import OpenAI from "openai";
 
 export async function updateApplicationAction(
   id: string,
-  data: { status?: ApplicationStatus; notes?: string }
+  data: { status?: ApplicationStatus; notes?: string; coverLetter?: string }
 ) {
   const session = await auth();
   if (!session?.user) {
@@ -39,6 +40,9 @@ export async function updateApplicationAction(
     }
     if (data.notes !== undefined) {
       updateData.notes = data.notes;
+    }
+    if (data.coverLetter !== undefined) {
+      updateData.coverLetter = data.coverLetter;
     }
 
     await db.application.update({
@@ -175,6 +179,7 @@ export async function createApplicationAction(data: {
         status: app.status as string,
         fitScore: app.fitScore,
         notes: app.notes,
+        coverLetter: app.coverLetter,
         appliedAt: app.appliedAt ? app.appliedAt.toISOString() : null,
         createdAt: app.createdAt.toISOString(),
         resume: null,
@@ -184,5 +189,104 @@ export async function createApplicationAction(data: {
   } catch (err: any) {
     console.error("Failed to create application:", err);
     return { success: false, error: err.message || "Failed to create" };
+  }
+}
+
+export async function generateCoverLetterAction(applicationId: string) {
+  const session = await auth();
+  if (!session?.user) {
+    return { success: false, error: "Unauthorized" };
+  }
+
+  const userId = (session.user as any).id;
+  if (!userId) {
+    return { success: false, error: "Unauthorized" };
+  }
+
+  try {
+    const app = await db.application.findUnique({
+      where: { id: applicationId },
+      select: {
+        userId: true,
+        jobTitle: true,
+        company: true,
+        jobDescription: true,
+        resumeId: true,
+      },
+    });
+
+    if (!app || app.userId !== userId) {
+      return { success: false, error: "Application not found or unauthorized" };
+    }
+
+    let resumeText = "";
+    if (app.resumeId) {
+      const resume = await db.resume.findFirst({
+        where: { id: app.resumeId, userId },
+        select: { parsedContent: true },
+      });
+      if (resume?.parsedContent && Object.keys(resume.parsedContent as object).length > 0) {
+        resumeText = JSON.stringify(resume.parsedContent);
+      }
+    } else {
+      // Find user's master resume or latest resume
+      const fallbackResume = await db.resume.findFirst({
+        where: { userId },
+        orderBy: [{ isMaster: "desc" }, { createdAt: "desc" }],
+        select: { parsedContent: true },
+      });
+      if (fallbackResume?.parsedContent && Object.keys(fallbackResume.parsedContent as object).length > 0) {
+        resumeText = JSON.stringify(fallbackResume.parsedContent);
+      }
+    }
+
+    if (!resumeText) {
+      return { success: false, error: "Please upload a resume first to generate a cover letter." };
+    }
+
+    const openai = new OpenAI({
+      apiKey: process.env.OPENAI_API_KEY,
+      timeout: 15 * 1000,
+      maxRetries: 1,
+    });
+
+    const prompt = `You are an expert career advisor. Write a highly personalized, professional, and concise cover letter (max 300 words) for the following job application.
+The cover letter should highlight how the candidate's specific experience and skills from their resume match the job requirements.
+
+Job Title: ${app.jobTitle}
+Company: ${app.company}
+Job Description:
+${app.jobDescription || "Not provided."}
+
+Candidate Resume Details:
+${resumeText}
+
+Write the cover letter directly. Do not include any introductory remarks, placeholders (like [Date], [Hiring Manager]), or sign-off boilerplate if they can be avoided. Keep it punchy, engaging, and professional.`;
+
+    const response = await openai.chat.completions.create({
+      model: "gpt-4o",
+      messages: [
+        { role: "system", content: "You are an assistant that writes highly optimized cover letters." },
+        { role: "user", content: prompt }
+      ],
+      temperature: 0.7,
+    });
+
+    const coverLetter = response.choices[0]?.message?.content || "";
+
+    if (!coverLetter) {
+      return { success: false, error: "Failed to generate cover letter text." };
+    }
+
+    await db.application.update({
+      where: { id: applicationId },
+      data: { coverLetter },
+    });
+
+    revalidatePath("/applications");
+    return { success: true, coverLetter };
+  } catch (err: any) {
+    console.error("Failed to generate cover letter:", err);
+    return { success: false, error: err.message || "Failed to generate cover letter" };
   }
 }

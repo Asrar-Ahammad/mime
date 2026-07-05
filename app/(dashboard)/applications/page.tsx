@@ -2,7 +2,7 @@ import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { redirect } from "next/navigation";
 import { ApplicationsClient } from "@/components/applications/applications-client";
-import { updateApplicationAction, deleteApplicationAction, bulkDeleteApplicationsAction, createApplicationAction } from "./actions";
+import { updateApplicationAction, deleteApplicationAction, bulkDeleteApplicationsAction, createApplicationAction, generateCoverLetterAction } from "./actions";
 import { Suspense } from "react";
 
 interface PageProps {
@@ -59,6 +59,7 @@ export default async function ApplicationsPage({ searchParams }: PageProps) {
     status: app.status as any,
     fitScore: app.fitScore,
     notes: app.notes,
+    coverLetter: app.coverLetter,
     appliedAt: app.appliedAt ? app.appliedAt.toISOString() : null,
     createdAt: app.createdAt.toISOString(),
     resume: app.resume,
@@ -80,6 +81,7 @@ export default async function ApplicationsPage({ searchParams }: PageProps) {
         deleteAction={deleteApplicationAction}
         bulkDeleteAction={bulkDeleteApplicationsAction}
         createAction={createApplicationAction}
+        generateCoverLetterAction={generateCoverLetterAction}
         initialAppId={initialAppId}
       />
     </Suspense>

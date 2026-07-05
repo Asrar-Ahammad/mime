@@ -21,6 +21,7 @@ import {
   Check,
   X,
 } from "@phosphor-icons/react";
+import { Sparkles, Copy } from "lucide-react";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -48,8 +49,17 @@ interface Resume {
   createdAt: string;
 }
 
+interface CoverLetterInfo {
+  id: string;
+  company: string;
+  jobTitle: string;
+  coverLetter: string;
+  updatedAt: string;
+}
+
 interface ResumesClientProps {
   initialResumes: Resume[];
+  initialCoverLetters: CoverLetterInfo[];
   setMasterAction: (id: string) => Promise<{ success: boolean; error?: string }>;
   deleteAction: (id: string) => Promise<{ success: boolean; error?: string }>;
   tailorAction: (
@@ -59,16 +69,26 @@ interface ResumesClientProps {
     jobDescription: string
   ) => Promise<{ success: boolean; data?: Resume; error?: string }>;
   updateNameAction: (id: string, name: string) => Promise<{ success: boolean; error?: string }>;
+  generateCoverLetterAction: (
+    resumeId: string,
+    jobTitle: string,
+    company: string,
+    jobDescription: string
+  ) => Promise<{ success: boolean; coverLetter?: string; error?: string }>;
 }
 
 export function ResumesClient({
   initialResumes,
+  initialCoverLetters,
   setMasterAction,
   deleteAction,
   tailorAction,
   updateNameAction,
+  generateCoverLetterAction,
 }: ResumesClientProps) {
   const [resumes, setResumes] = useState<Resume[]>(initialResumes);
+  const [coverLetters, setCoverLetters] = useState<CoverLetterInfo[]>(initialCoverLetters);
+  const [viewingCL, setViewingCL] = useState<CoverLetterInfo | null>(null);
   const [selectedResume, setSelectedResume] = useState<Resume | null>(
     initialResumes.find((r) => r.isMaster) || initialResumes[0] || null
   );
@@ -76,6 +96,10 @@ export function ResumesClient({
   const [uploading, setUploading] = useState(false);
   const [tailoring, setTailoring] = useState(false);
   const [tailorOpen, setTailorOpen] = useState(false);
+  const [coverLetterOpen, setCoverLetterOpen] = useState(false);
+  const [generatingCL, setGeneratingCL] = useState(false);
+  const [generatedCL, setGeneratedCL] = useState("");
+  const [copied, setCopied] = useState(false);
   const [jobTitle, setJobTitle] = useState("");
   const [company, setCompany] = useState("");
   const [jobDesc, setJobDesc] = useState("");
@@ -229,29 +253,69 @@ export function ResumesClient({
     }
   };
 
+  const handleGenerateCoverLetter = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedResume) return;
+    if (!jobTitle || !company || !jobDesc) {
+      toast.error("Please fill in all target job details.");
+      return;
+    }
+
+    setGeneratingCL(true);
+    try {
+      const result = await generateCoverLetterAction(selectedResume.id, jobTitle, company, jobDesc);
+      if (result.success && result.coverLetter) {
+        setGeneratedCL(result.coverLetter);
+        
+        // Add the newly persisted cover letter to client state
+        const newCL = {
+          id: Math.random().toString(), // Temp ID for list rendering key
+          company,
+          jobTitle,
+          coverLetter: result.coverLetter,
+          updatedAt: new Date().toISOString(),
+        };
+        setCoverLetters((prev) => [newCL, ...prev]);
+        
+        toast.success("Cover letter generated successfully!");
+      } else {
+        toast.error(result.error || "Failed to generate cover letter.");
+      }
+    } catch (err) {
+      toast.error("An unexpected error occurred during generation.");
+    } finally {
+      setGeneratingCL(false);
+    }
+  };
+
   return (
     <div className="space-y-6 w-full min-w-0">
       {/* Header */}
-      <div className="flex items-center justify-between gap-4">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground">Resumes</h1>
           <p className="text-sm text-muted-foreground hidden sm:block">
             Upload your master resume and generate tailored variants optimized for specific job roles.
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 w-full sm:w-auto justify-start sm:justify-end">
           {selectedResume && (
-            <Button onClick={() => setTailorOpen(true)} variant="outline" className="gap-1.5 sm:gap-2 shrink-0 bg-card border-border/40">
-              <Sparkle size={16} weight="fill" />
-              <span>Tailor Resume</span>
-            </Button>
+            <>
+              <Button onClick={() => {
+                setGeneratedCL("");
+                setCoverLetterOpen(true);
+              }} variant="outline" className="gap-1.5 sm:gap-2 shrink-0 bg-card border-border/40 text-xs sm:text-sm">
+                <Sparkles className="w-4 h-4 text-primary" />
+                <span className="hidden sm:inline">Generate Cover Letter</span>
+                <span className="inline sm:hidden">Cover Letter</span>
+              </Button>
+              <Button onClick={() => setTailorOpen(true)} variant="outline" className="gap-1.5 sm:gap-2 shrink-0 bg-card border-border/40 text-xs sm:text-sm">
+                <Sparkle size={16} weight="fill" />
+                <span className="hidden sm:inline">Tailor Resume</span>
+                <span className="inline sm:hidden">Tailor</span>
+              </Button>
+            </>
           )}
-          {/* <Button asChild className="gap-1.5 sm:gap-2 shrink-0">
-            <Link href="/resumes/editor" className="flex items-center justify-center gap-1">
-              <Plus size={16} weight="bold" />
-              <span>Create Resume</span>
-            </Link>
-          </Button> */}
         </div>
       </div>
 
@@ -337,6 +401,44 @@ export function ResumesClient({
               )}
             </CardContent>
           </Card>
+
+          {/* Generated Cover Letters */}
+          <Card className="glass-card border-border/40 shadow-lg w-full min-w-0">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base font-semibold flex items-center gap-2">
+                <Sparkles className="w-4 h-4 text-primary" />
+                Cover Letters
+              </CardTitle>
+              <CardDescription>Persisted letters from your applications</CardDescription>
+            </CardHeader>
+            <CardContent className="px-0">
+              {coverLetters.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-8 text-xs text-muted-foreground px-6 text-center">
+                  No generated cover letters. Generate one from an application or tailoring workflow.
+                </div>
+              ) : (
+                <div className="divide-y divide-border/20 max-h-[300px] overflow-y-auto">
+                  {coverLetters.map((cl) => (
+                    <div
+                      key={cl.id}
+                      onClick={() => setViewingCL(cl)}
+                      className="flex items-center justify-between px-6 py-3 cursor-pointer transition-smooth hover:bg-accent/10"
+                    >
+                      <div className="min-w-0 flex-1 pr-2">
+                        <p className="text-xs font-semibold text-foreground truncate">
+                          {cl.company}
+                        </p>
+                        <p className="text-[10px] text-muted-foreground truncate">
+                          {cl.jobTitle}
+                        </p>
+                      </div>
+                      <CaretRight size={12} className="text-muted-foreground shrink-0" />
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </div>
 
         {/* Right Side: Preview & Detail & Tailor */}
@@ -345,8 +447,8 @@ export function ResumesClient({
             <>
               {/* Detail view of the selected resume */}
               <Card className="glass-card border-border/40 shadow-lg w-full min-w-0">
-                <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between pb-4 border-b border-border/20">
-                  <div className="space-y-1 pr-4 flex-1">
+                <CardHeader className="flex flex-col gap-4 pb-4 border-b border-border/20 md:flex-row md:items-start md:justify-between">
+                  <div className="space-y-1 pr-4 flex-1 min-w-0">
                     {isEditingName ? (
                       <div className="flex items-center gap-2 max-w-md mb-1.5">
                         <Input
@@ -417,7 +519,7 @@ export function ResumesClient({
                       )}
                     </div>
                   </div>
-                  <div className="flex flex-wrap items-center gap-2 sm:shrink-0">
+                  <div className="flex flex-wrap items-center gap-2 shrink-0">
                     <a
                       href={`/resumes/export/${selectedResume.id}`}
                       target="_blank"
@@ -738,6 +840,169 @@ export function ResumesClient({
               </Button>
             </DialogFooter>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Cover Letter Dialog Modal */}
+      <Dialog open={coverLetterOpen} onOpenChange={setCoverLetterOpen}>
+        <DialogContent className="sm:max-w-xl bg-card border border-border/40 max-h-[90vh] overflow-y-auto animate-in fade-in zoom-in duration-200">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-foreground font-bold">
+              <Sparkles className="w-5 h-5 text-primary" />
+              Generate Cover Letter
+            </DialogTitle>
+            <DialogDescription>
+              AI will write a personalized cover letter matching your resume to this job profile.
+            </DialogDescription>
+          </DialogHeader>
+
+          {!generatedCL ? (
+            <form onSubmit={handleGenerateCoverLetter} className="space-y-4 pt-2">
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                    Job Title
+                  </label>
+                  <Input
+                    placeholder="e.g. Senior Frontend Developer"
+                    value={jobTitle}
+                    onChange={(e) => setJobTitle(e.target.value)}
+                    className="bg-accent/10 border-border/40 focus-visible:bg-accent/20 text-xs h-9"
+                    required
+                    autoFocus
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                    Company Name
+                  </label>
+                  <Input
+                    placeholder="e.g. Google"
+                    value={company}
+                    onChange={(e) => setCompany(e.target.value)}
+                    className="bg-accent/10 border-border/40 focus-visible:bg-accent/20 text-xs h-9"
+                    required
+                  />
+                </div>
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                  Job Description
+                </label>
+                <Textarea
+                  placeholder="Paste job details, key qualifications, and tech stack here..."
+                  value={jobDesc}
+                  onChange={(e) => setJobDesc(e.target.value)}
+                  className="bg-accent/10 border-border/40 focus-visible:bg-accent/20 text-xs h-40 resize-none overflow-y-auto"
+                  required
+                />
+              </div>
+              <DialogFooter className="sm:justify-end gap-2">
+                <DialogClose render={<Button variant="outline" size="sm" />}>
+                  Cancel
+                </DialogClose>
+                <Button
+                  type="submit"
+                  disabled={generatingCL}
+                  className="font-semibold text-xs h-8"
+                >
+                  {generatingCL ? (
+                    <>
+                      <Spinner size={16} className="animate-spin mr-1 text-primary" />
+                      Generating...
+                    </>
+                  ) : (
+                    "Generate Cover Letter"
+                  )}
+                </Button>
+              </DialogFooter>
+            </form>
+          ) : (
+            <div className="space-y-4 pt-2">
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                  Generated Cover Letter
+                </label>
+                <Textarea
+                  value={generatedCL}
+                  onChange={(e) => setGeneratedCL(e.target.value)}
+                  className="bg-accent/10 border-border/40 focus-visible:bg-accent/20 text-xs h-80 overflow-y-auto resize-none font-sans leading-relaxed text-foreground"
+                />
+              </div>
+              <DialogFooter className="sm:justify-between gap-2 flex flex-col sm:flex-row">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setGeneratedCL("")}
+                  className="w-full sm:w-auto h-8 text-xs"
+                >
+                  Back / Reset
+                </Button>
+                <div className="flex gap-2 w-full sm:w-auto justify-end">
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => {
+                      navigator.clipboard.writeText(generatedCL);
+                      setCopied(true);
+                      toast.success("Copied to clipboard!");
+                      setTimeout(() => setCopied(false), 2000);
+                    }}
+                    className="gap-1.5 h-8 text-xs bg-accent/40 border border-border/30 hover:bg-accent/60"
+                  >
+                    <Copy className="w-3.5 h-3.5 text-primary" />
+                    {copied ? "Copied!" : "Copy to Clipboard"}
+                  </Button>
+                  <DialogClose render={<Button size="sm" className="h-8 text-xs" />}>
+                    Done
+                  </DialogClose>
+                </div>
+              </DialogFooter>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* View Saved Cover Letter Dialog */}
+      <Dialog open={!!viewingCL} onOpenChange={(open) => !open && setViewingCL(null)}>
+        <DialogContent className="sm:max-w-xl bg-card border border-border/40 max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-foreground font-bold">
+              <Sparkles className="w-5 h-5 text-primary" />
+              Cover Letter for {viewingCL?.company}
+            </DialogTitle>
+            <DialogDescription>
+              Job Title: {viewingCL?.jobTitle}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 pt-2">
+            <div className="space-y-1.5">
+              <Textarea
+                readOnly
+                value={viewingCL?.coverLetter || ""}
+                className="bg-accent/5 border-border/40 text-xs h-80 overflow-y-auto resize-none font-sans leading-relaxed text-foreground"
+              />
+            </div>
+            <DialogFooter className="sm:justify-end gap-2">
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => {
+                  if (viewingCL) {
+                    navigator.clipboard.writeText(viewingCL.coverLetter);
+                    toast.success("Copied to clipboard!");
+                  }
+                }}
+                className="gap-1.5 h-8 text-xs bg-accent/40 border border-border/30 hover:bg-accent/60"
+              >
+                <Copy className="w-3.5 h-3.5 text-primary" />
+                Copy to Clipboard
+              </Button>
+              <Button size="sm" className="h-8 text-xs" onClick={() => setViewingCL(null)}>
+                Close
+              </Button>
+            </DialogFooter>
+          </div>
         </DialogContent>
       </Dialog>
     </div>

@@ -1,9 +1,20 @@
 import { db } from './lib/db';
 
 async function main() {
-  const apps = await db.application.findMany({
-    select: { id: true, status: true, appliedAt: true, createdAt: true, updatedAt: true }
+  const letters = await db.application.findMany({
+    where: {
+      coverLetter: {
+        not: null
+      }
+    },
+    select: {
+      id: true,
+      company: true,
+      jobTitle: true,
+      coverLetter: true
+    }
   });
-  console.log(apps);
+  console.log("=== Cover Letters in DB ===");
+  console.log(letters);
 }
 main().finally(() => db.$disconnect());
