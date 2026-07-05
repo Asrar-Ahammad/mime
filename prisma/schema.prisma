@@ -162,7 +162,7 @@ model AgentConfig {
   isActive        Boolean  @default(false)
   syncHour        Int      @default(6)  // 0-23 hour for daily Gmail sync
   syncMinute      Int      @default(0)  // 0-59 minute for daily Gmail sync
-  autoDeleteUnlinkedEmails Boolean @default(true)
+  autoDeleteUnlinkedEmails Boolean @default(false)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

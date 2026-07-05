@@ -59,17 +59,44 @@ const COLUMNS: { id: ApplicationStatus; title: string; color: string; border: st
 ];
 
 export function KanbanBoard({ applications, onStatusChange, onSelectApp }: KanbanBoardProps) {
-  const [isMounted, setIsMounted] = useState(false);
-  const [portalEl, setPortalEl] = useState<HTMLElement | null>(null);
+  const [portalState, setPortalState] = useState<{ mounted: boolean; element: HTMLElement | null }>({
+    mounted: false,
+    element: null,
+  });
 
   useEffect(() => {
-    setIsMounted(true);
-    if (typeof window !== "undefined") {
-      setPortalEl(document.body);
-    }
+    setPortalState({
+      mounted: true,
+      element: typeof window !== "undefined" ? document.body : null,
+    });
   }, []);
 
-  if (!isMounted) {
+  const computedDates = useMemo(() => {
+    const dates = new Map<string, string | null>();
+    applications.forEach((app) => {
+      let displayDate = app.appliedAt;
+      if (app.emailThreads && app.emailThreads.length > 0) {
+        const sorted = [...app.emailThreads].sort(
+          (a, b) => new Date(b.lastMessageDate).getTime() - new Date(a.lastMessageDate).getTime()
+        );
+        if (sorted[0]) {
+          displayDate = sorted[0].lastMessageDate;
+        }
+      }
+      dates.set(
+        app.id,
+        displayDate
+          ? new Date(displayDate).toLocaleDateString("en-US", {
+              month: "short",
+              day: "numeric",
+            })
+          : null
+      );
+    });
+    return dates;
+  }, [applications]);
+
+  if (!portalState.mounted) {
     return (
       <div className="flex h-96 items-center justify-center text-muted-foreground">
         Loading Kanban Board...
@@ -137,20 +164,7 @@ export function KanbanBoard({ applications, onStatusChange, onSelectApp }: Kanba
                       </div>
                     ) : (
                       columnApps.map((app, index) => {
-                        // Date formatted
-                        let displayDate = app.appliedAt;
-                        if (app.emailThreads && app.emailThreads.length > 0) {
-                          const latestThread = [...app.emailThreads].sort(
-                            (a, b) => new Date(b.lastMessageDate).getTime() - new Date(a.lastMessageDate).getTime()
-                          )[0];
-                          displayDate = latestThread.lastMessageDate;
-                        }
-                        const dateStr = displayDate
-                          ? new Date(displayDate).toLocaleDateString("en-US", {
-                              month: "short",
-                              day: "numeric",
-                            })
-                          : null;
+                        const dateStr = computedDates.get(app.id);
 
                         return (
                           <Draggable key={app.id} draggableId={app.id} index={index}>
@@ -225,8 +239,8 @@ export function KanbanBoard({ applications, onStatusChange, onSelectApp }: Kanba
                                 </div>
                               );
 
-                              if (snapshot.isDragging && portalEl) {
-                                return createPortal(cardContent, portalEl);
+                              if (snapshot.isDragging && portalState.element) {
+                                return createPortal(cardContent, portalState.element);
                               }
                               return cardContent;
                             }}

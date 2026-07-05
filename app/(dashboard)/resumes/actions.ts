@@ -214,13 +214,19 @@ export async function generateCoverLetterAction(
       return { success: false, error: "Resume not found" };
     }
 
-    const resumeText = JSON.stringify(resume.parsedContent || "");
+    let resumeText = "";
+    if (resume.parsedContent && Object.keys(resume.parsedContent as object).length > 0) {
+      resumeText = JSON.stringify(resume.parsedContent);
+    }
+
     if (!resumeText) {
       return { success: false, error: "Resume has no structured content" };
     }
 
     const openai = new OpenAI({
       apiKey: process.env.OPENAI_API_KEY,
+      timeout: 15 * 1000,
+      maxRetries: 1,
     });
 
     const prompt = `You are an expert career advisor. Write a highly personalized, professional, and concise cover letter (max 300 words) for the following job application.
@@ -250,6 +256,21 @@ Write the cover letter directly. Do not include any introductory remarks, placeh
     if (!coverLetter) {
       return { success: false, error: "Failed to generate cover letter text." };
     }
+
+    // Persist the cover letter in the database by creating a QUEUED application
+    await db.application.create({
+      data: {
+        userId,
+        resumeId,
+        company,
+        jobTitle,
+        jobUrl: "", // Optional/empty since it's just generated
+        jobDescription,
+        platform: "direct",
+        status: "QUEUED",
+        coverLetter,
+      },
+    });
 
     return { success: true, coverLetter };
   } catch (err: any) {

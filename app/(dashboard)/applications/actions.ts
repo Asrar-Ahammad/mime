@@ -221,12 +221,12 @@ export async function generateCoverLetterAction(applicationId: string) {
 
     let resumeText = "";
     if (app.resumeId) {
-      const resume = await db.resume.findUnique({
-        where: { id: app.resumeId },
+      const resume = await db.resume.findFirst({
+        where: { id: app.resumeId, userId },
         select: { parsedContent: true },
       });
-      if (resume) {
-        resumeText = JSON.stringify(resume.parsedContent || "");
+      if (resume?.parsedContent && Object.keys(resume.parsedContent as object).length > 0) {
+        resumeText = JSON.stringify(resume.parsedContent);
       }
     } else {
       // Find user's master resume or latest resume
@@ -235,8 +235,8 @@ export async function generateCoverLetterAction(applicationId: string) {
         orderBy: [{ isMaster: "desc" }, { createdAt: "desc" }],
         select: { parsedContent: true },
       });
-      if (fallbackResume) {
-        resumeText = JSON.stringify(fallbackResume.parsedContent || "");
+      if (fallbackResume?.parsedContent && Object.keys(fallbackResume.parsedContent as object).length > 0) {
+        resumeText = JSON.stringify(fallbackResume.parsedContent);
       }
     }
 
@@ -246,6 +246,8 @@ export async function generateCoverLetterAction(applicationId: string) {
 
     const openai = new OpenAI({
       apiKey: process.env.OPENAI_API_KEY,
+      timeout: 15 * 1000,
+      maxRetries: 1,
     });
 
     const prompt = `You are an expert career advisor. Write a highly personalized, professional, and concise cover letter (max 300 words) for the following job application.

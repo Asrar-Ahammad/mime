@@ -988,6 +988,83 @@ export function ApplicationsClient({
                 )}
               </div>
 
+              {/* Cover Letter Section */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+                    <LucideFileText className="h-3.5 w-3.5" /> Cover Letter
+                  </h3>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={handleCoverLetterGenerate}
+                      disabled={isGenerating}
+                      className="h-7 px-2 text-xs text-primary hover:bg-primary/10 gap-1.5 transition-smooth"
+                    >
+                      {isGenerating ? (
+                        <>
+                          <RefreshCw className="h-3 w-3 animate-spin" />
+                          Generating...
+                        </>
+                      ) : (
+                        <>
+                          <Sparkles className="h-3 w-3" />
+                          AI Generate
+                        </>
+                      )}
+                    </Button>
+                    {!isEditingCoverLetter ? (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setIsEditingCoverLetter(true)}
+                        className="h-7 px-2 text-xs text-primary hover:bg-primary/10 gap-1.5 transition-smooth"
+                      >
+                        <PencilSimple size={12} /> Edit
+                      </Button>
+                    ) : (
+                      <div className="flex gap-2">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setIsEditingCoverLetter(false)}
+                          className="h-7 px-2 text-xs text-muted-foreground hover:bg-accent"
+                        >
+                          Cancel
+                        </Button>
+                        <Button
+                          size="sm"
+                          onClick={handleCoverLetterSave}
+                          disabled={isPending}
+                          className="h-7 px-2.5 text-xs bg-primary text-primary-foreground font-semibold gap-1.5"
+                        >
+                          <Check size={12} /> Save
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {isEditingCoverLetter ? (
+                  <Textarea
+                    value={coverLetterEdit}
+                    onChange={(e) => setCoverLetterEdit(e.target.value)}
+                    placeholder="Write or generate a cover letter..."
+                    rows={8}
+                    className="w-full bg-accent/10 border border-border/40 text-sm font-sans leading-relaxed text-foreground"
+                  />
+                ) : (
+                  <div className="rounded-xl border border-border/30 bg-accent/5 p-4 text-xs whitespace-pre-wrap leading-relaxed text-muted-foreground min-h-[80px]">
+                    {selectedApp.coverLetter ? (
+                      selectedApp.coverLetter
+                    ) : (
+                      <span className="text-muted-foreground/60 italic">No cover letter generated yet. Click AI Generate to write one.</span>
+                    )}
+                  </div>
+                )}
+              </div>
+
               {/* Job Description */}
               <div className="space-y-2">
                 <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1">

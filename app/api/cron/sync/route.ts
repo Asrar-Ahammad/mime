@@ -23,25 +23,32 @@ export async function GET(request: Request) {
         const count = await syncUserEmails(user.id);
 
         let deletedCount = 0;
-        const config = await db.agentConfig.findFirst({
-          where: { userId: user.id },
-        });
-
-        if (config?.autoDeleteUnlinkedEmails) {
-          const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
-          const deleteResult = await db.emailThread.deleteMany({
-            where: {
-              userId: user.id,
-              applicationId: null,
-              createdAt: {
-                lt: twentyFourHoursAgo,
-              },
-            },
+        try {
+          const config = await db.agentConfig.findFirst({
+            where: { userId: user.id },
           });
-          deletedCount = deleteResult.count;
-          if (deletedCount > 0) {
-            console.log(`[Cron Sync] Auto-deleted ${deletedCount} unlinked emails for user ${user.id}`);
+
+          // Default to true if config is missing; only explicit false disables auto-deletion
+          const autoDelete = config ? config.autoDeleteUnlinkedEmails : true;
+
+          if (autoDelete) {
+            const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+            const deleteResult = await db.emailThread.deleteMany({
+              where: {
+                userId: user.id,
+                applicationId: null,
+                createdAt: {
+                  lt: twentyFourHoursAgo,
+                },
+              },
+            });
+            deletedCount = deleteResult.count;
+            if (deletedCount > 0) {
+              console.log(`[Cron Sync] Auto-deleted ${deletedCount} unlinked emails for user ${user.id}`);
+            }
           }
+        } catch (delErr) {
+          console.error(`[Cron Sync] Auto-deletion failed for user ${user.id}:`, delErr);
         }
 
         return { userId: user.id, email: user.email, success: true, count, deletedCount };
