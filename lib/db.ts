@@ -9,11 +9,12 @@ const globalForPrisma = globalThis as unknown as {
 
 const createPrismaClient = () => {
   const connectionString = process.env.DATABASE_URL;
-  // Limit connection pool size in serverless/lambda environment
+  // Limit connection pool size to 1 in serverless/lambda environments
+  // to avoid hitting the Supabase Pooler session client limit (max 15 clients).
   const pool = new Pool({ 
     connectionString,
-    max: 2,
-    idleTimeoutMillis: 30000,
+    max: 1,
+    idleTimeoutMillis: 15000,
     connectionTimeoutMillis: 2000,
   });
   const adapter = new PrismaPg(pool);
