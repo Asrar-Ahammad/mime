@@ -9,7 +9,13 @@ const globalForPrisma = globalThis as unknown as {
 
 const createPrismaClient = () => {
   const connectionString = process.env.DATABASE_URL;
-  const pool = new Pool({ connectionString });
+  // Limit connection pool size in serverless/lambda environment
+  const pool = new Pool({ 
+    connectionString,
+    max: 2,
+    idleTimeoutMillis: 30000,
+    connectionTimeoutMillis: 2000,
+  });
   const adapter = new PrismaPg(pool);
   
   return new PrismaClient({
